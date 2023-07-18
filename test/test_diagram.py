@@ -31,6 +31,12 @@ class Test_simple(unittest.TestCase):
             os.remove(a)
         self.assertFalse(x)
 
+    def test_fail2(self):
+        d = diagram.Diagram(mm(200), mm(200))
+        t1 = d.text("t1", "abc", 12)
+        with self.assertRaises(Exception):
+            d.lalign([t1, t1])
+
 
 if __name__ == "__main__":
     unittest.main()

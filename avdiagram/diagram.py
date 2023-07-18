@@ -363,6 +363,11 @@ class Diagram(object):
     def add_constraint(
         self, name: str, sums: List[Tuple[float, DVar]], op: Relation, const: float
     ) -> None:
+        var_ids = set()
+        for (_, var) in sums:
+            if var.id in var_ids:
+                raise Exception("duplicate variable in constraint: " + repr(var))
+            var_ids.add(var.id)
         c = Constraint(name, sums, op, const)
         self.constraints.append(c)
 
