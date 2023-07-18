@@ -578,17 +578,7 @@ class Diagram(object) :
             problem.addConstraint(l,operator,cons.const)
         return (problem, d, dglpk)
 
-    def run(self,filename:str)->None :
-        (problem, d, dglpk) = self.enforce()
-        objective: List[Tuple[glpk.Var, float]] = []
-        for v in self.vars:
-            objective.append((dglpk[v.id],1))
-
-        problem.setObjective('MIN',objective)
-        problem.run()
-        values: dict[str,float] = {}
-        for vv in d:
-            values[vv] = dglpk[vv].value
+    def create_svg(self, values: dict[str,float])->list[Stuff]:
         l:list[Stuff] = []
         # the border
         r0 = polyline([(0,0),(self.width,0),(self.width,self.height),(0,self.width),(0,0)])
@@ -610,13 +600,30 @@ class Diagram(object) :
         for (o1,p1,o2,p2,liste) in self.clines :
             paa = self.bpath(values, o1,p1,o2,p2,liste)
             l.append(paa)
+        return l
 
+    def run(self,filename:str)-> bool :
+        (problem, d, dglpk) = self.enforce()
+        objective: List[Tuple[glpk.Var, float]] = []
+        for v in self.vars:
+            objective.append((dglpk[v.id],1))
+
+        problem.setObjective('MIN',objective)
+        if not problem.run():
+            return False
+        values: dict[str,float] = {}
+        for vv in d:
+            values[vv] = dglpk[vv].value
+        l = self.create_svg(values)
         render_file(filename,self.width,self.height,[l])
+        return True
+
 
     def show(self)->None:
         with tempfile.NamedTemporaryFile(mode='w',suffix='.svg',delete=False) as f:
             filename = f.name
             print("SVG Filename:" + filename)
-            self.run(filename)
+            if not self.run(filename):
+                raise Exception("no solution for diagram found")
             c = webbrowser.get('firefox')
             c.open('file://' + filename,autoraise=False)

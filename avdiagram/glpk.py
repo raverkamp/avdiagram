@@ -37,7 +37,7 @@ class Problem (object):
         self.vars:List[Var] = []
         self.cons:List[Constraint] = []
         self.vardict:dict[str,Var] = {}
-        self.objectives:List[Term] = []
+        self.objective:List[Term] = []
         self.min_or_max = "Nix"
 
     def addvar(self,key:str, lbound: Optional[float],ubound: Optional[float])->Var:
@@ -159,40 +159,45 @@ class Problem (object):
 
 
     def parseSolution(self,fileName:str)->List[float]:
-        input = open(fileName,'r')
-        objective:float = 0
-        vars: List[float] = []
-        for line in input:
-            cols = line.split(' ')
-            if cols[0] == 'c':
-                continue
-            if cols[0] == 'e':
-                break
-            if cols[0] == 's': # solution
-                (_,_,ncons,nvars,uf1,uf2,obj) = cols
-                # f == feasible, u == unfeasible?
-                if not (uf1 == 'f' and uf2 == 'f'):
-                    raise Exception('glpk solver failed')
-                objective = float(obj)
-                vars = [0.0] * int(nvars)
-            if cols[0] == 'j':
-                j = int(cols[1])
-                v = float(cols[3])
-                vars[j-1] = v
-        return vars
+        with open(fileName,'r') as input:
+            objective:float = 0
+            vars: List[float] = []
+            for line in input:
+                if len(line) == 0:
+                    continue
+                cc = line[0]
+                if cc == 'c':
+                    continue
+                if cc == 'e':
+                    break
+                if cc == 's': # solution
+                    (_,_,ncons,nvars,uf1,uf2,obj) = line.split(' ')
+                    # f == feasible, u == unfeasible?
+                    if not (uf1 == 'f' and uf2 == 'f'):
+                        return []
+                    objective = float(obj)
+                    vars = [0.0] * int(nvars)
+                if cc == 'j':
+                    cols = line.split(' ')
+                    j = int(cols[1])
+                    v = float(cols[3])
+                    vars[j-1] = v
+            return vars
 
-    def run(self)->None:
+    def run(self)->bool:
         for v in self.vars:
             v.value = 0
-        file_input = tempfile.NamedTemporaryFile(prefix='gplk-input-', suffix='.txt',mode='w', delete=False)
-        file_input_name = file_input.name
-        self.renderToGLPK(cast(TextIO,file_input))
-        file_input.close()
-        file_output = tempfile.NamedTemporaryFile(prefix='gplk-output-', suffix='.txt',mode='w', delete=False)
-        file_output_name = file_output.name
-        file_output.close()
+            with tempfile.NamedTemporaryFile(prefix='glpk-input-', suffix='.txt',mode='w', delete=False) as file_input:
+                file_input_name = file_input.name
+                self.renderToGLPK(cast(TextIO,file_input))
+        with tempfile.NamedTemporaryFile(prefix='glpk-output-', suffix='.txt',mode='w', delete=False) as file_output:
+            file_output_name = file_output.name
         subprocess.call(['glpsol','--glp',file_input_name,'--write', file_output_name],
                         stdin=None, stdout=None, stderr=None, shell=False, timeout=None)
+
         solution_vars = self.parseSolution(file_output_name)
+        if len(solution_vars) == 0:
+            return False
         for i in range(len(solution_vars)):
             self.vars[i].value = solution_vars[i]
+        return True
