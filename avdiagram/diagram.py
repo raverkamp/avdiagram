@@ -84,10 +84,18 @@ class Constraint(object):
 
 
 class Base(object):
-    def __init__(self, name: str, x: DVar, y: DVar) -> None:
-        self._name = name
-        self.xvar: DVar = x
-        self.yvar: DVar = y
+    def __init__(self, d: "Diagram", name: str) -> None:
+        d.check_name(name)
+        self.name = name
+
+    def point(self):
+        raise Exception("not implemented")
+
+    def width(self):
+        raise Exception("not implemented")
+
+    def height(self):
+        raise Exception("not implemented")
 
 
 def flatten_internal(l: Any, res: List[Union[str, Base]]) -> None:
@@ -109,42 +117,124 @@ def flatten(s: Any) -> List[Union[str, Base]]:
 
 
 class Thing(Base):
-    def __init__(self, name: str, x: DVar, y: DVar, w: DVar, h: DVar) -> None:
-        super().__init__(name, x, y)
-        self.width = w
-        self.height = h
+    pass
 
-    def to_svg(self, x: float, y: float, w: float, h: float) -> Tag:
-        raise Exception("not implemented")
+
+class Line(Base):
+    def __init__(self, d: "Diagram", name: str, w: float):
+        self.name = name
+        self._p1 = d.point(newid(name))
+        self._p2 = d.point(newid(name))
+        self.line_width = w
+        self._width = None
+        self._height = None
+        self.diagram = d
+        d.add_object(name, self)
+
+    def point(self):
+        return self.p1()
+
+    def p1(self):
+        return self._p1
+
+    def p2(self):
+        return self._p2
+
+    def width(self):
+        if self.var_width:
+            return self.var_width
+        v = self.diagram.get_var(self.name, "w", None)
+        self.var_width = v
+        self.diagram.ad_constraint([(1, self.p1.xvar), (-1, self.p2.xvar), (1, v)], 0)
+
+    def height(self):
+        if self._height:
+            return self.var_height
+        v = self.diagram.get_var(self.name, "h", None)
+        self._height = v
+        self.diagramm.ad_constraint([(1, self.p1.yvar), (-1, self.p2.yvar), (1, v)], 0)
+
+    def to_svg(self, env) -> Tag:
+        return line(
+            env(self.p1().xvar),
+            env(self.p1().yvar),
+            env(self.p2().xvar),
+            env(self.p2().yvar),
+            color="green",
+        )
 
 
 class Point(Base):
-    def __init__(self, name: str, x: DVar, y: DVar) -> None:
-        super().__init__(name, x, y)
+    def __init__(self, d: "Diagram", name: str):
+        self.name = name
+        self.diagram = d
 
-    def to_svg(self, x: float, y: float, w: float, h: float) -> Tag:
+        self.xvar = d.get_var(name, "x", None)
+        self.yvar = d.get_var(name, "y", None)
+
+        d.add_object(name, self)
+
+    def point(self):
+        return self
+
+    def x(self):
+        return self.xvar
+
+    def y(self):
+        return self.yvar
+
+    def to_svg(self, env) -> Tag:
         return translate(
-            x,
-            y,
+            env(self.x()),
+            env(self.y()),
             [
                 line(-10, 0, 10, 0, color="red"),
                 line(0, -10, 0, 10, color="red"),
-                text(10, -10, self._name),
+                text(10, -10, self.name),
             ],
         )
 
 
 #  diagram table
 class DTable(Thing):
-    def __init__(
-        self, name: str, table: Table, font: Font, x: DVar, y: DVar, w: DVar, h: DVar
-    ) -> None:
-        super().__init__(name, x, y, w, h)
+    def __init__(self, d: "Diagram", name: str, table: Table, font: Font) -> None:
         self.table = table
         self.font = font
         self.tb = mm(2)
+        self.diagram = d
 
-    def to_svg(self, x: float, y: float, w: float, h: float) -> Tag:
+        name = table.name
+        d.check_name(name)
+        self.name = name
+
+        tb = mm(1)
+        h = (2 + len(table.columns)) * font.font_size * 1.5
+        w = text_width(font, name)
+        for c in table.columns:
+            w = max(w, text_width(font, c.name + " " + c.type))
+        width = w + 2 * tb
+        height = h
+        self._point = Point(d, newid())
+        self._width = d.get_var(name, "w", width)
+        self._height = d.get_var(name, "h", height)
+
+        d.add_object(name, self)
+
+    def point(self):
+        return self._point
+
+    def width(self):
+        return self._width
+
+    def height(self):
+        return self._height
+
+    def to_svg(self, env) -> Tag:
+        w = env(self.width())
+        h = env(self.height())
+        x = env(self.point().x())
+        y = env(self.point().y())
+
         r = polyline([(0, 0), (w, 0), (w, h), (0, h), (0, 0)])
         bl = 1.5 * self.font.font_size
         th = text(self.tb, bl, self.table.name, self.font)
@@ -165,35 +255,75 @@ class DTable(Thing):
 
 
 class DText(Thing):
-    def __init__(
-        self, name: str, txt: str, font: Font, x: DVar, y: DVar, w: DVar, h: DVar
-    ) -> None:
-        super().__init__(name, x, y, w, h)
-        self.font = font
-        self.txt = txt
+    def __init__(self, d: "Digram", name: str, txt: str, sz: float):
+        self.diagram = d
+        self.name = name
+        self.font = Font("Inconsolata", sz, "")
+        self.text = txt
+        self._point = d.point(newid(name))
+        w = text_width(self.font, txt)
+        self._width = d.get_var(name, "w", w)
+        self._height = d.get_var(name, "h", sz)
 
-    def to_svg(self, x: float, y: float, w: float, h: float) -> Tag:
-        return translate(x, y, [text(0, self.font.font_size, self.txt, self.font)])
+        d.add_object(name, self)
+
+    def width(self):
+        return self._width
+
+    def height(self):
+        return self._height
+
+    def point(self):
+        return self._point
+
+    def to_svg(self, env) -> Tag:
+        return translate(
+            env(self.point().xvar),
+            env(self.point().yvar),
+            [text(0, self.font.font_size, self.text, self.font)],
+        )
 
 
 class DTextLines(Thing):
     def __init__(
-        self,
-        name: str,
-        txt: List[str],
-        font: Font,
-        border: float,
-        x: DVar,
-        y: DVar,
-        w: DVar,
-        h: DVar,
-    ) -> None:
-        super().__init__(name, x, y, w, h)
+        self, d: "Digram", name: str, txt: List[str], font: Font, border: float
+    ):
+        self.name = name
+        self._point = d.point(newid(name))
+
+        d.check_name(name)
+        self.font = font
+        wi = 0.0
+        for l in txt:
+            wi = max(wi, text_width(font, l))
+        tb = mm(2)
+        width = wi + 2 * tb
+        height = (len(txt) - 1) * 1.5 * font.font_size + font.font_size + 2 * tb
+
+        self._width = d.get_var(name, "w", width)
+        self._height = d.get_var(name, "h", height)
+
         self.tb = border
         self.font = font
         self.text_lines = txt
+        self.diagram = d
+        d.add_object(name, self)
 
-    def to_svg(self, x: float, y: float, w: float, h: float) -> Tag:
+    def width(self):
+        return self._width
+
+    def height(self):
+        return self._height
+
+    def point(self):
+        return self._point
+
+    def to_svg(self, env):
+        x = env(self.point().xvar)
+        y = env(self.point().yvar)
+        w = env(self.width())
+        h = env(self.height())
+
         r = polyline([(0, 0), (w, 0), (w, h), (0, h), (0, 0)])
         bl = self.font.font_size + self.tb
         lc = []
@@ -321,7 +451,6 @@ def cpfor(
 class Diagram(object):
     def __init__(self, w: float, h: float, debug: bool = False) -> None:
         # the base date, the importetd table, not necessarly all displayed
-        self.tabledict: dict[str, Table] = {}
 
         # the obejcts indexed by name
         self.objects: dict[str, Base] = {}
@@ -346,6 +475,7 @@ class Diagram(object):
 
         self.counter = 0
         self.debug = debug
+        self.zero_var = self.get_var(newid(), "cons", 0)
 
     # k20 = Key2Object, keep it short
     def k2o(self, k: Union[Base, str]) -> Base:
@@ -354,7 +484,7 @@ class Diagram(object):
                 raise Exception("unknown object: " + k)
             return self.objects[k]
         else:
-            name = k._name
+            name = k.name
             if name in self.objects and self.objects[name] == k:
                 return k
             else:
@@ -371,6 +501,13 @@ class Diagram(object):
         c = Constraint(name, sums, op, const)
         self.constraints.append(c)
 
+    def same(self, p1: Point, p2: Point):
+        self.add_constraint("SAME", [(1, p1.x()), (-1, p2.x())], Relation.EQ, 0)
+        self.add_constraint("SAME", [(1, p1.y()), (-1, p2.y())], Relation.EQ, 0)
+
+    def samev(self, v1: DVar, v2: DVar):
+        self.add_constraint("SAMEV", [(1, v1), (-1, v2)], Relation.EQ, 0)
+
     def left(self, t1: Any, c: float, t2: Any) -> None:
         l1 = flatten(t1)
         if len(l1) == 0:
@@ -385,17 +522,17 @@ class Diagram(object):
             obj = self.k2o(kobj)
             sum1: List[tuple[float, DVar]] = [(1, varr)]
             if isinstance(obj, Point):
-                sum1.append((-1, obj.xvar))
+                sum1.append((-1, obj.x()))
             elif isinstance(obj, Thing):
-                sum1.append((-1, obj.xvar))
-                sum1.append((-1, obj.width))
+                sum1.append((-1, obj.point().x()))
+                sum1.append((-1, obj.width()))
             else:
                 raise Exception("unknown")
             self.add_constraint("left1", sum1, Relation.GE, c)
 
         for kobj in l2:
             obj = self.k2o(kobj)
-            sum2: List[tuple[float, DVar]] = [(-1, varr), (1, obj.xvar)]
+            sum2: List[tuple[float, DVar]] = [(-1, varr), (1, obj.point().x())]
             self.add_constraint("left2", sum2, Relation.GE, 0)
 
     def over(self, t1: Any, c: float, t2: Any) -> None:
@@ -411,10 +548,10 @@ class Diagram(object):
             obj = self.k2o(kobj)
             sum1: List[tuple[float, DVar]] = [(1, varr)]
             if isinstance(obj, Point):
-                sum1.append((-1, obj.yvar))
+                sum1.append((-1, obj.y()))
             elif isinstance(obj, Thing):
-                sum1.append((-1, obj.yvar))
-                sum1.append((-1, obj.height))
+                sum1.append((-1, obj.point().y()))
+                sum1.append((-1, obj.height()))
             else:
                 raise Exception("unknown")
             self.add_constraint("left1", sum1, Relation.GE, c)
@@ -423,9 +560,9 @@ class Diagram(object):
             obj = self.k2o(kobj)
             sum2: List[tuple[float, DVar]] = [(-1, varr)]
             if isinstance(obj, Point):
-                sum2.append((1, obj.yvar))
+                sum2.append((1, obj.y()))
             elif isinstance(obj, Thing):
-                sum2.append((1, obj.yvar))
+                sum2.append((1, obj.point().y()))
             else:
                 raise Exception("unknown")
             self.add_constraint("left2", sum2, Relation.GE, 0)
@@ -450,9 +587,9 @@ class Diagram(object):
     def lalign(self, l: List[Union[str, Base]]) -> None:
         if len(l) <= 1:
             return
-        var0 = self.k2o(l[0]).xvar
+        var0 = self.k2o(l[0]).point().x()
         for q in l[1:]:
-            var1 = self.k2o(q).xvar
+            var1 = self.k2o(q).point().x()
             self.add_constraint("lalign", [(1, var0), (-1, var1)], Relation.EQ, 0)
 
     def some_align(self, l: List[Union[str, Base]], fac: float) -> None:
@@ -461,16 +598,16 @@ class Diagram(object):
 
         obj0 = self.k2o(l[0])
         if isinstance(obj0, Thing):
-            l0 = [(float(1), obj0.xvar), (fac, obj0.width)]
+            l0 = [(float(1), obj0.point().x()), (fac, obj0.width())]
         else:
-            l0 = [(float(1), obj0.xvar)]
+            l0 = [(float(1), obj0.x())]
 
         for q in l[1:]:
             obj1 = self.k2o(q)
             if isinstance(obj1, Thing):
-                l1 = [(-1.0, obj1.xvar), (-fac, obj1.width)]
+                l1 = [(-1.0, obj1.point().x()), (-fac, obj1.width())]
             else:
-                l1 = [(float(-1), obj1.xvar)]
+                l1 = [(float(-1), obj1.x())]
 
             self.add_constraint("ralign", l0 + l1, Relation.EQ, 0)
 
@@ -509,61 +646,32 @@ class Diagram(object):
     def point(
         self, name: str, x: Optional[float] = None, y: Optional[float] = None
     ) -> Point:
-        self.check_name(name)
-        point = Point(name, self.get_var(name, "x", x), self.get_var(name, "x", y))
-        self.objects[name] = point
+
+        point = Point(self, name)
+        if not x is None:
+            self.add_constraint("FIX", [(1, point.x())], Relation.EQ, x)
+        if not y is None:
+            self.add_constraint("FIX", [(1, point.y())], Relation.EQ, y)
         return point
+
+    def add_object(self, name, o):
+        self.check_name(name)
+        self.objects[name] = o
 
     def text(self, name: str, txt: str, sz: float) -> Thing:
         self.check_name(name)
-        font = Font("Inconsolata", sz, "")
-        w = text_width(font, txt)
-        xvar = self.get_var(name, "x", None)
-        yvar = self.get_var(name, "y", None)
-        wvar = self.get_var(name, "w", w)
-        hvar = self.get_var(name, "h", sz)
-
-        t = DText(name, txt, font, xvar, yvar, wvar, hvar)
-        self.objects[name] = t
-        return t
+        return DText(self, name, txt, sz)
 
     def textl(self, name: str, txt: List[str], sz: float) -> Thing:
         self.check_name(name)
         font = Font("Inconsolata", sz, "")
-        wi = 0.0
-        for l in txt:
-            wi = max(wi, text_width(font, l))
         tb = mm(2)
-        width = wi + 2 * tb
-        height = (len(txt) - 1) * 1.5 * font.font_size + font.font_size + 2 * tb
-        xvar = self.get_var(name, "x", None)
-        yvar = self.get_var(name, "y", None)
-        wvar = self.get_var(name, "w", width)
-        hvar = self.get_var(name, "h", height)
-
-        t = DTextLines(name, list(txt), font, tb, xvar, yvar, wvar, hvar)
-        self.objects[name] = t
+        t = DTextLines(self, name, list(txt), font, tb)
         return t
 
     def table(self, tab: Table) -> Thing:
-        name = tab.name
-        self.check_name(name)
-        self.tabledict[name] = tab
-        tb = mm(1)
-        font = self.default_font
-        h = (2 + len(tab.columns)) * font.font_size * 1.5
-        w = text_width(font, name)
-        for c in tab.columns:
-            w = max(w, text_width(font, c.name + " " + c.type))
-        width = w + 2 * tb
-        height = h
-        xvar = self.get_var(name, "x", None)
-        yvar = self.get_var(name, "y", None)
-        wvar = self.get_var(name, "w", width)
-        hvar = self.get_var(name, "h", height)
-
-        dtab = DTable(tab.name, tab, font, xvar, yvar, wvar, hvar)
-        self.objects[tab.name] = dtab
+        font = Font("Inconsolata", 12, "")
+        dtab = DTable(self, tab.name, tab, font)
         return dtab
 
     # a connection line
@@ -590,13 +698,11 @@ class Diagram(object):
             liste_.append(xx)
         self.clines.append((a1, float(p1), a2, float(p2), liste_))
 
-    def posfornum(
-        self, values: dict[str, float], obj: Thing, p: float
-    ) -> Tuple[float, float]:
-        x = values[obj.xvar.id]
-        y = values[obj.yvar.id]
-        wi = values[obj.width.id]
-        he = values[obj.height.id]
+    def posfornum(self, env, obj: Thing, p: float) -> Tuple[float, float]:
+        x = env(obj.point().x())
+        y = env(obj.point().y())
+        wi = env(obj.width())
+        he = env(obj.height())
         (ox, oy) = posfornumbase(wi, he, p)
         return (x + ox, y + oy)
 
@@ -620,7 +726,7 @@ class Diagram(object):
 
     def bpath(
         self,
-        values: dict[str, float],
+        env,
         obj1: Thing,
         p1: float,
         obj2: Thing,
@@ -628,8 +734,8 @@ class Diagram(object):
         liste: List[Point],
     ) -> Tag:
         d = 100
-        (x1, y1) = self.posfornum(values, obj1, p1)
-        (x2, y2) = self.posfornum(values, obj2, p2)
+        (x1, y1) = self.posfornum(env, obj1, p1)
+        (x2, y2) = self.posfornum(env, obj2, p2)
         (cx1, cy1) = self.cp(x1, y1, p1, d)
         (cx2, cy2) = self.cp(x2, y2, p2, d)
 
@@ -684,22 +790,25 @@ class Diagram(object):
             ]
         )
         l.append(r0)
+
+        def env(varr):
+            return values[varr.id]
+
         for key in self.objects:
             obj = self.objects[key]
-            if isinstance(obj, Thing):
-                x = values[obj.xvar.id]
-                y = values[obj.yvar.id]
-                w = values[obj.width.id]
-                h = values[obj.height.id]
-                svgtab = obj.to_svg(x, y, w, h)
+            if isinstance(obj, (Line, DText)):
+                a = obj.to_svg(env)
+                l.append(a)
+            elif isinstance(obj, Thing):
+                svgtab = obj.to_svg(env)
                 l.append(svgtab)
             if self.debug and isinstance(obj, Point):
                 x = values[obj.xvar.id]
                 y = values[obj.yvar.id]
-                l.append(obj.to_svg(x, y, 0, 0))
+                l.append(obj.to_svg(env))
 
         for (o1, p1, o2, p2, liste) in self.clines:
-            paa = self.bpath(values, o1, p1, o2, p2, liste)
+            paa = self.bpath(env, o1, p1, o2, p2, liste)
             l.append(paa)
         return l
 
