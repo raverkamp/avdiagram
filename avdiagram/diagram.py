@@ -4,6 +4,7 @@ from .svg import Font, polyline, text, line, translate, path, render_file, Tag, 
 import math
 from enum import Enum
 from . import glpk
+from . import ortools_solver
 from typing import List, Optional, Union, Any, Tuple, Callable, cast
 import webbrowser
 import tempfile
@@ -56,7 +57,7 @@ class DVar(object):
         lbound: Optional[float],
         ubound: Optional[float],
     ):
-        self.id = newid()
+        self.id = newid(name)
         self.name = name
         self.parent = parent
         self.lbound = lbound
@@ -260,7 +261,7 @@ class DText(Thing):
         self.name = name
         self.font = Font("Inconsolata", sz, "")
         self.text = txt
-        self._point = d.point(newid(name))
+        self._point = d.real_point(name + "_point")
         w = text_width(self.font, txt)
         self._width = d.get_var(name, "w", w)
         self._height = d.get_var(name, "h", sz)
@@ -377,7 +378,7 @@ def load_tables(
 
         b = itertools.groupby(a2, keyy)
         tabs = {}
-        for (_, rows_) in b:
+        for _, rows_ in b:
             rows = list(rows_)
             name = rows[0][1]
             l = []
@@ -475,7 +476,7 @@ class Diagram(object):
 
         self.counter = 0
         self.debug = debug
-        self.zero_var = self.get_var(newid(), "cons", 0)
+        self.zero_var = self.get_var(newid(), "zero", 0)
 
     # k20 = Key2Object, keep it short
     def k2o(self, k: Union[Base, str]) -> Base:
@@ -494,7 +495,7 @@ class Diagram(object):
         self, name: str, sums: List[Tuple[float, DVar]], op: Relation, const: float
     ) -> None:
         var_ids = set()
-        for (_, var) in sums:
+        for _, var in sums:
             if var.id in var_ids:
                 raise Exception("duplicate variable in constraint: " + repr(var))
             var_ids.add(var.id)
@@ -646,8 +647,20 @@ class Diagram(object):
     def point(
         self, name: str, x: Optional[float] = None, y: Optional[float] = None
     ) -> Point:
-
         point = Point(self, name)
+        if not x is None:
+            self.add_constraint("FIX", [(1, point.x())], Relation.EQ, x)
+        if not y is None:
+            self.add_constraint("FIX", [(1, point.y())], Relation.EQ, y)
+        return point
+
+    def real_point(
+        self, name: str, x: Optional[float] = None, y: Optional[float] = None
+    ) -> Point:
+        point = Point(self, name)
+        self.add_constraint("real", [(1, point.x())], Relation.GE, 0)
+        self.add_constraint("real", [(1, point.y())], Relation.GE, 0)
+
         if not x is None:
             self.add_constraint("FIX", [(1, point.x())], Relation.EQ, x)
         if not y is None:
@@ -767,7 +780,7 @@ class Diagram(object):
 
         for cons in self.constraints:
             l = []
-            for (fac, var) in cons.sums:
+            for fac, var in cons.sums:
                 l.append((dglpk[var.id], fac))
             operator = (
                 "GE"
@@ -776,6 +789,30 @@ class Diagram(object):
             )
             problem.addConstraint(l, operator, cons.const)
         return (problem, d, dglpk)
+
+    def solve_problem(self):
+        var_list = []
+        for v in self.vars:
+            var_list.append((v.id, v.lbound, v.ubound))
+
+        cons_list = []
+        for cons in self.constraints:
+            l = []
+            for fac, var in cons.sums:
+                l.append((fac, var.id))
+            (low, up) = (None, None)
+            if cons.op in (Relation.GE, Relation.EQ):
+                low = cons.const
+            if cons.op in (Relation.LE, Relation.EQ):
+                up = cons.const
+            cons_list.append((newid(), l, low, up))
+
+        objective = []
+        for v in self.vars:
+            objective.append((1, v.id))
+
+        sol = ortools_solver.solve(var_list, cons_list, objective, "min")
+        return sol
 
     def create_svg(self, values: dict[str, float]) -> list[Stuff]:
         l: list[Stuff] = []
@@ -807,7 +844,7 @@ class Diagram(object):
                 y = values[obj.yvar.id]
                 l.append(obj.to_svg(env))
 
-        for (o1, p1, o2, p2, liste) in self.clines:
+        for o1, p1, o2, p2, liste in self.clines:
             paa = self.bpath(env, o1, p1, o2, p2, liste)
             l.append(paa)
         return l
@@ -828,11 +865,21 @@ class Diagram(object):
         render_file(filename, self.width, self.height, [l])
         return True
 
-    def show(self) -> None:
+    def show2(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".svg", delete=False) as f:
             filename = f.name
             print("SVG Filename:" + filename)
             if not self.run(filename):
                 raise Exception("no solution for diagram found")
+            c = webbrowser.get("firefox")
+            c.open("file://" + filename, autoraise=False)
+
+    def show(self) -> None:
+        res = self.solve_problem()
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".svg", delete=False) as f:
+            filename = f.name
+            print("SVG Filename:" + filename)
+            l = self.create_svg(res)
+            render_file(filename, self.width, self.height, [l])
             c = webbrowser.get("firefox")
             c.open("file://" + filename, autoraise=False)

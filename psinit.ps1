@@ -2,7 +2,7 @@
  Write-Host $p
  $BASEDIR = Split-Path -Path $p
 
- $env:PYTHONPATH=$BASEDIR
+ . $BASEDIR\pyenv\Scripts\Activate.ps1  
 
- . $BASEDIR\pyenv\Scripts\Activate.ps1
+ $env:PYTHONPATH=$BASEDIR
  

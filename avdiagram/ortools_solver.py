@@ -1,23 +1,24 @@
-
+import pprint as pp
 import ortools
 from ortools.linear_solver import pywraplp
 
 
-def LinearProgrammingExample():
-    """Linear programming sample."""
-    # Instantiate a Glop solver, naming it LinearExample.
-
-
 def solve(variables, constraints, objective, min_or_max):
     assert min_or_max in ("min", "max")
+    """print("variables")
+    pp.pprint(variables)
+    print("constraints")
+    pp.pprint(constraints)
+    print("objective")
+    pp.pprint(objective)
+    pp.pprint(min_or_max)"""
 
     solver = pywraplp.Solver.CreateSolver("GLOP")
 
     var_dict = dict()
 
-    
     for var in variables:
-        (name, ubound, lbound) = var
+        (name, lbound, ubound) = var
         if name in var_dict:
             raise Exception("duplicate variable: " + name)
         assert isinstance(name, str)
@@ -30,7 +31,7 @@ def solve(variables, constraints, objective, min_or_max):
             low = -solver.infinity()
         else:
             low = lbound
-        
+
         v = solver.NumVar(low, up, name)
         var_dict[name] = v
 
@@ -68,19 +69,18 @@ def solve(variables, constraints, objective, min_or_max):
     else:
         obj.SetMaximization()
 
+    #print(solver.ExportModelAsLpFormat(False))
+
     status = solver.Solve()
 
     if status != solver.OPTIMAL:
-        print('The problem does not have an optimal solution!')
+        print("The problem does not have an optimal solution!")
         if status == solver.FEASIBLE:
-            print('A potentially suboptimal solution was found.')
+            print("A potentially suboptimal solution was found.")
         else:
-            print('The solver could not solve the problem.')
+            print("The solver could not solve the problem.")
             exit(1)
-        raise Exception("solving fail")
     res = {}
     for vname in var_dict:
         res[vname] = var_dict[vname].solution_value()
     return res
-        
-        
