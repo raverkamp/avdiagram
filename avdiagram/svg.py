@@ -66,13 +66,21 @@ defs = Raw(
 # "
 
 
-def rect(c: str, x: float, y: float, w: float, h: float) -> Tag:
+def rect(
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    color: str,
+    line_color: str = "#000000",
+    line_width: float = 1,
+) -> Tag:
     return Tag(
         "polygon",
         {
-            "fill": c,
-            "stroke": "black",
-            "stroke-width": "1",
+            "fill": color,
+            "stroke": line_color,
+            "stroke-width": str(line_width),
             "points": points([(x, y), (x + w, y), (x + w, y + h), (x, y + h)]),
         },
         None,
@@ -143,9 +151,9 @@ def rendertag(l: list[str], tag: Tag) -> None:
     if tag.content is None:
         l.append("/>\n")
     else:
-        l.append(">")
+        l.append(">\n")
         render(l, tag.content)
-        l.append("</" + tag.name + ">")
+        l.append("</" + tag.name + ">\n")
 
 
 def render(l: list[str], x: Stuff) -> None:

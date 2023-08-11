@@ -1,7 +1,8 @@
-from avdiagram import cm, mm, Diagram, Table, Column
+import argparse
+from avdiagram import cm, mm, Diagram, Table, Column, Rectangle
 
 
-def main() -> None:
+def cmd_example1(args) -> None:
     d = Diagram(cm(20), cm(20), True)
 
     t1 = d.text("t1", "text 1", 12)
@@ -29,11 +30,93 @@ def main() -> None:
     d.over(p1, mm(50), p2)
     d.left(p1, mm(20), p2)
 
+    r = Rectangle(d, "A", 1, "green")
+
     tl = d.textl("tl", ["A", "B", "C", "D"], 18)
+
+    d.same(r.point(), tl.point())
+    d.samev(r.width(), tl.width())
+    d.samev(r.height(), tl.height())
 
     d.over(t3, mm(20), tl)
 
     d.show()
+
+
+def cmd_example2(args):
+    d = Diagram(cm(20), cm(20), True)
+    r = Rectangle(d, "A", mm(2), "#80ff80")
+
+    tl = d.textl("tl", ["A", "B", "C", "D"], 18)
+
+    d.same(r.point(), tl.point())
+    d.samev(r.width(), tl.width())
+    d.samev(r.height(), tl.height())
+    d.show()
+
+
+def mk_box(
+    d: Diagram,
+    txt: str,
+    size: float = 12,
+    borders=None,
+    border_width=1,
+    fgcolor="#000000",
+    bgcolor="#ffffff",
+    border_color="#000000",
+):
+    r = Rectangle(d, "A", line_width=border_width, color=bgcolor)
+    tl = d.textl("tl", txt.split("\n"), size)
+    if borders is None:
+        (leftb, rightb, upb, lowb) = (size, size, size, size)
+    elif isinstance(borders, (float, int)):
+        (leftb, rightb, upb, lowb) = (borders, borders, borders, borders)
+    else:
+        (leftb, rightb, upb, lowb) = borders
+
+    d.diffv(tl.point().x(), r.point().x(), leftb)
+    d.diffv(tl.point().y(), r.point().y(), upb)
+
+    d.diffv(r.width(), tl.width(), leftb + rightb)
+    d.diffv(r.height(), tl.height(), upb + lowb)
+
+    return r
+
+
+def cmd_example3(args):
+    d = Diagram(cm(20), cm(20), True)
+
+    r = mk_box(d, "a\nbbb\ncccccc", 12, borders=mm(20))
+    p = d.point("AAA", mm(20), mm(40))
+    d.same(r.point(), p)
+
+    r = mk_box(
+        d, "a\nbbb\ncccccc", 24, borders=mm(10), bgcolor="#aaaaaa", border_width=mm(2)
+    )
+    p = d.point("AAA", mm(100), mm(40))
+    d.same(r.point(), p)
+    d.show()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="Examples",
+        description="""Examples for Development""",
+    )
+
+    subparsers = parser.add_subparsers(required=True)
+
+    p_ex1 = subparsers.add_parser("ex1")
+    p_ex1.set_defaults(func=cmd_example1)
+
+    p_ex2 = subparsers.add_parser("ex2")
+    p_ex2.set_defaults(func=cmd_example2)
+
+    p_ex3 = subparsers.add_parser("ex3")
+    p_ex3.set_defaults(func=cmd_example3)
+
+    args = parser.parse_args()
+    args.func(args)
 
 
 main()

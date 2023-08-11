@@ -1,1 +1,1 @@
-from .diagram import cm, mm, Diagram, Table, Column, load_tables, Line
+from .diagram import cm, mm, Diagram, Table, Column, load_tables, Line, Rectangle

@@ -69,7 +69,7 @@ def solve(variables, constraints, objective, min_or_max):
     else:
         obj.SetMaximization()
 
-    #print(solver.ExportModelAsLpFormat(False))
+    # print(solver.ExportModelAsLpFormat(False))
 
     status = solver.Solve()
 
