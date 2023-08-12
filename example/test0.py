@@ -107,34 +107,33 @@ def cmd_example4(args):
 
     p = d.point("AAA", mm(10), mm(10))
 
-    d.same(r1.point(),p)
+    d.same(r1.point(), p)
     d.samev(r1.width(), r2.width())
     d.samev(r1.width(), r3.width())
     d.samev(r1.height(), r2.height())
     d.samev(r1.height(), r3.height())
 
-    d.add_constraint("C1", [(1,r1.width())],Relation.EQ, mm(20))
-    d.add_constraint("C2", [(1,r1.height())],Relation.EQ, mm(40))
+    d.add_constraint("C1", [(1, r1.width())], Relation.EQ, mm(20))
+    d.add_constraint("C2", [(1, r1.height())], Relation.EQ, mm(40))
 
-    d.over(r1,mm(40), r2)
-    d.left(r1,mm(40), r3)
+    d.over(r1, mm(40), r2)
+    d.left(r1, mm(40), r3)
 
-
-    d.lalign([r1,r2])
+    d.lalign([r1, r2])
 
     d.samev(r1.point().y(), r3.point().y())
 
-    l = Line(d, "A",1)
-    d.same(d.port(r1,12),l.p1())
-    d.same(d.port(r3,32),l.p2())
+    l = Line(d, "A", 1)
+    d.same(d.port(r1, 12), l.p1())
+    d.same(d.port(r3, 32), l.p2())
 
-    l = Line(d, "A",1)
-    d.same(d.port(r1,27),l.p1())
-    d.same(d.port(r2,2),l.p2())
-    
-    
+    l = Line(d, "A", 1)
+    d.same(d.port(r1, 27), l.p1())
+    d.same(d.port(r2, 2), l.p2())
+
     d.show()
-    
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="Examples",
