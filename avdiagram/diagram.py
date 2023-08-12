@@ -35,7 +35,7 @@ _newid = mk_counter()
 
 
 def newid(s: Optional[str] = None) -> str:
-    return (s or "") + _newid()
+    return (s or "") + "-" + _newid()
 
 
 Table = namedtuple("Table", ["name", "columns", "pk"])
@@ -96,40 +96,38 @@ class Constraint(object):
 
 
 class Base(object):
+    """everything with at least one coordinate"""
+
     def __init__(self, d: "Diagram", name: str) -> None:
         self.name = name
+        self.diagram = d
 
     def point(self):
-        raise Exception("not implemented")
+        raise NotImplementedError()
 
-    def width(self):
-        raise Exception("not implemented")
-
-    def height(self):
-        raise Exception("not implemented")
+    def to_svg(self, env) -> Tag:
+        raise NotImplementedError()
 
 
-def flatten_internal(l: Any, res: List[Union[str, Base]]) -> None:
-    if isinstance(l, str):
-        res.append(l)
-    elif isinstance(l, Base):
-        res.append(l)
-    elif isinstance(l, collections.abc.Iterable):
-        for a in l:
-            flatten_internal(a, res)
-    else:
-        raise Exception("Wrong thing")
+def flatten(s: Any) -> List[Base]:
+    def flatten_internal(l: Any, res: List[Base]) -> None:
+        assert not isinstance(l, str), "string not allowed:" + l
+        if isinstance(l, Base):
+            res.append(l)
+        elif isinstance(l, collections.abc.Iterable):
+            for a in l:
+                flatten_internal(a, res)
+        else:
+            raise Exception("Wrong kind of object: " + repr(l))
 
-
-def flatten(s: Any) -> List[Union[str, Base]]:
-    res: List[Union[str, Base]] = []
+    res: List[Base] = []
     flatten_internal(s, res)
     return res
 
 
 class Line(Base):
     def __init__(self, d: "Diagram", name: str, line_width: float):
-        self.name = name
+        super().__init__(d, name)
         self._p1 = d.point(newid(name))
         self._p2 = d.point(newid(name))
         self.line_width = line_width
@@ -147,24 +145,6 @@ class Line(Base):
     def p2(self):
         return self._p2
 
-    def width(self):
-        if self._width:
-            return self._width
-        v = self.diagram.get_var(self.name, "w", None)
-        self._width = v
-        self.diagram.add_constraint(
-            "bla", [(1, self.p1.xvar), (-1, self.p2.xvar), (1, v)], Relation.EQ, 0
-        )
-
-    def height(self):
-        if self._height:
-            return self._height
-        v = self.diagram.get_var(self.name, "h", None)
-        self._height = v
-        self.diagram.add_constraint(
-            "bla", [(1, self.p1.y()), (-1, self.p2.y()), (1, v)], Relation.E, 0
-        )
-
     def to_svg(self, env) -> Tag:
         return line(
             env(self.p1().x()),
@@ -176,26 +156,29 @@ class Line(Base):
 
 
 class Thing(Base):
-    pass
+    """something with a point at upper left and a positive witdh and height"""
 
-
-class Rectangle(Thing):
-    def __init__(self, d: "Diagram", name: str, line_width: float, color: str):
-        self.name = name
-        self._p1 = d.point(newid(name))
-        self._p2 = d.point(newid(name))
-        self._line_width = line_width
-        self._color = color
-        self._width = None
-        self._height = None
-        self.diagram = d
-        d.add_constraint(name, [(1, self._p2.x()), (-1, self._p1.x())], Relation.GE, 0)
-        d.add_constraint(name, [(1, self._p2.y()), (-1, self._p1.y())], Relation.GE, 0)
-
-        d.add_object(name, self)
+    def __init__(self, d: "Diagram", name: str):
+        super().__init__(d, name)
+        self._p1 = d.point(name + "-p1")
+        self._p2 = d.point(name + "-p2")
+        self._width = d.get_var(name + "-width", 0, None)
+        self._height = d.get_var(name + "-height", 0, None)
+        d.add_constraint(
+            name,
+            [(1, self._p2.x()), (-1, self._p1.x()), (-1, self._width)],
+            Relation.EQ,
+            0,
+        )
+        d.add_constraint(
+            name,
+            [(1, self._p2.y()), (-1, self._p1.y()), (-1, self._height)],
+            Relation.EQ,
+            0,
+        )
 
     def point(self):
-        return self.p1()
+        return self._p1
 
     def p1(self):
         return self._p1
@@ -204,24 +187,44 @@ class Rectangle(Thing):
         return self._p2
 
     def width(self):
-        if self._width:
-            return self._width
-        v = self.diagram.get_var(self.name, "w", None)
-        self._width = v
-        self.diagram.add_constraint(
-            "bla", [(1, self.p1().x()), (-1, self.p2().x()), (1, v)], Relation.EQ, 0
-        )
         return self._width
 
     def height(self):
-        if self._height:
-            return self._height
-        v = self.diagram.get_var(self.name, "h", None)
-        self._height = v
-        self.diagram.add_constraint(
-            "bla", [(1, self.p1().y()), (-1, self.p2().y()), (1, v)], Relation.EQ, 0
-        )
         return self._height
+
+    def port(self, pos: float):
+        if pos < 0 or pos > 40:
+            raise Exception("out of bounds: " + str(pos))
+        p = self.diagram.point("a")
+        if pos < 10:
+            self.diagram.convex_comb(p.x(), pos / 10.0, self.point().x(), self.p2().x())
+            self.diagram.samev(p.y(), self.point().y())
+        elif pos < 20:
+            self.diagram.samev(p.x(), self.p2().x())
+            self.diagram.convex_comb(
+                p.y(), (pos - 10) / 10, self.point().y(), self.p2().y()
+            )
+        elif pos < 30:
+            self.diagram.convex_comb(
+                p.x(), 1 - (pos - 20) / 10.0, self.point().x(), self.p2().x()
+            )
+            self.diagram.samev(p.y(), self.p2().y())
+        else:
+            self.diagram.samev(p.x(), self.point().x())
+            self.diagram.convex_comb(
+                p.y(), 1 - (pos - 30) / 10, self.point().y(), self.p2().y()
+            )
+        return p
+
+
+class Rectangle(Thing):
+    def __init__(self, d: "Diagram", name: str, line_width: float, color: str):
+        super().__init__(d, name)
+        self.name = name
+        self._line_width = line_width
+        self._color = color
+
+        d.add_object(name, self)
 
     def to_svg(self, env) -> Tag:
         return rect(
@@ -238,11 +241,10 @@ class Point(Base):
     def __init__(self, d: "Diagram", name: str):
         assert isinstance(d, Diagram)
         assert isinstance(name, str)
-        self.name = name
-        self.diagram = d
+        super().__init__(d, name)
 
-        self._xvar = d.get_var(name, "x", None)
-        self._yvar = d.get_var(name, "y", None)
+        self._xvar = d.get_var(name + "-x", 0, None)
+        self._yvar = d.get_var(name + "-y", 0, None)
 
         d.add_object(name, self)
 
@@ -270,6 +272,7 @@ class Point(Base):
 #  diagram table
 class DTable(Thing):
     def __init__(self, d: "Diagram", name: str, table: Table, font: Font) -> None:
+        super().__init__(d, name)
         self.table = table
         self.font = font
         self.tb = mm(2)
@@ -285,20 +288,10 @@ class DTable(Thing):
             w = max(w, text_width(font, c.name + " " + c.type))
         width = w + 2 * tb
         height = h
-        self._point = Point(d, newid())
-        self._width = d.get_var(name, "w", width)
-        self._height = d.get_var(name, "h", height)
+        self.diagram.add_constraint("w", [(1, self.width())], Relation.EQ, width)
+        self.diagram.add_constraint("h", [(1, self.height())], Relation.EQ, height)
 
         d.add_object(name, self)
-
-    def point(self):
-        return self._point
-
-    def width(self):
-        return self._width
-
-    def height(self):
-        return self._height
 
     def to_svg(self, env) -> Tag:
         w = env(self.width())
@@ -326,26 +319,17 @@ class DTable(Thing):
 
 
 class DText(Thing):
-    def __init__(self, d: "Digram", name: str, txt: str, sz: float):
-        self.diagram = d
-        self.name = name
+    def __init__(self, d: "Diagram", name: str, txt: str, sz: float):
+        super().__init__(d, name)
         self.font = Font("Inconsolata", sz, "")
         self.text = txt
-        self._point = d.real_point(name + "_point")
-        w = text_width(self.font, txt)
-        self._width = d.get_var(name, "w", w)
-        self._height = d.get_var(name, "h", sz)
+
+        width = text_width(self.font, txt)
+
+        self.diagram.add_constraint("w", [(1, self.width())], Relation.EQ, width)
+        self.diagram.add_constraint("h", [(1, self.height())], Relation.EQ, sz)
 
         d.add_object(name, self)
-
-    def width(self):
-        return self._width
-
-    def height(self):
-        return self._height
-
-    def point(self):
-        return self._point
 
     def to_svg(self, env) -> Tag:
         return translate(
@@ -357,10 +341,9 @@ class DText(Thing):
 
 class DTextLines(Thing):
     def __init__(
-        self, d: "Digram", name: str, txt: List[str], font: Font, border: float
+        self, d: "Diagram", name: str, txt: List[str], font: Font, border: float
     ):
-        self.name = name
-        self._point = d.point(newid(name))
+        super().__init__(d, name)
 
         self.font = font
         wi = 0.0
@@ -370,23 +353,14 @@ class DTextLines(Thing):
         width = wi + 2 * tb
         height = (len(txt) - 1) * 1.5 * font.font_size + font.font_size + 2 * tb
 
-        self._width = d.get_var(name, "w", width)
-        self._height = d.get_var(name, "h", height)
-
         self.tb = border
         self.font = font
         self.text_lines = txt
-        self.diagram = d
+
+        self.diagram.add_constraint("w", [(1, self.width())], Relation.EQ, width)
+        self.diagram.add_constraint("h", [(1, self.height())], Relation.EQ, height)
+
         d.add_object(name, self)
-
-    def width(self):
-        return self._width
-
-    def height(self):
-        return self._height
-
-    def point(self):
-        return self._point
 
     def to_svg(self, env):
         x = env(self.point().x())
@@ -546,7 +520,7 @@ class Diagram(object):
 
         self.counter = 0
         self.debug = debug
-        self.zero_var = self.get_var(newid(), "zero", 0)
+        self.zero_var = self.get_var("zero", 0, 0)
 
     def add_constraint(
         self, name: str, sums: List[Tuple[float, DVar]], op: Relation, const: float
@@ -577,7 +551,7 @@ class Diagram(object):
         if len(l2) == 0:
             return
 
-        varr = self.get_var(newid(), "cons", None)
+        varr = self.get_var("cons-left", None, None)
 
         for kobj in l1:
             obj = kobj
@@ -603,7 +577,7 @@ class Diagram(object):
         l2 = flatten(t2)
         if len(l2) == 0:
             return
-        varr = self.get_var(newid(), "cons", None)
+        varr = self.get_var("cons-over", None, None)
 
         for kobj in l1:
             obj = kobj
@@ -638,14 +612,14 @@ class Diagram(object):
 
         for kobj in l[1:]:
             obj = kobj
-            lu = [(-1.0, obj0.yvar)]
+            lu = [(-1.0, obj0.point().y())]
             if isinstance(obj0, Thing):
                 lu.append((-1.0, obj0.height))
-            lu.append((1, obj.yvar))
+            lu.append((1, obj.point().y()))
             self.add_constraint("y dist", lu, Relation.EQ, dist)
             obj0 = obj
 
-    def lalign(self, l: List[Union[str, Base]]) -> None:
+    def lalign(self, l: List[Base]) -> None:
         if len(l) <= 1:
             return
         var0 = l[0].point().x()
@@ -653,7 +627,7 @@ class Diagram(object):
             var1 = q.point().x()
             self.add_constraint("lalign", [(1, var0), (-1, var1)], Relation.EQ, 0)
 
-    def some_align(self, l: List[Union[str, Base]], fac: float) -> None:
+    def some_align(self, l: List[Base], fac: float) -> None:
         if len(l) <= 1:
             return
 
@@ -661,42 +635,38 @@ class Diagram(object):
         if isinstance(obj0, Thing):
             l0 = [(float(1), obj0.point().x()), (fac, obj0.width())]
         else:
-            l0 = [(float(1), obj0.x())]
+            l0 = [(float(1), obj0.point().x())]
 
         for q in l[1:]:
             obj1 = q
             if isinstance(obj1, Thing):
                 l1 = [(-1.0, obj1.point().x()), (-fac, obj1.width())]
             else:
-                l1 = [(float(-1), obj1.x())]
+                l1 = [(float(-1), obj1.point().x())]
 
             self.add_constraint("ralign", l0 + l1, Relation.EQ, 0)
 
-    def ralign(self, l: List[Union[str, Base]]) -> None:
+    def ralign(self, l: List[Base]) -> None:
         return self.some_align(l, 1)
 
-    def calign(self, l: List[Union[str, Base]]) -> None:
+    def calign(self, l: List[Base]) -> None:
         return self.some_align(l, 0.5)
 
     def pos(
         self,
-        name: Union[str, Base],
+        obj: Point,
         x: Optional[float] = None,
         y: Optional[float] = None,
     ) -> None:
-        obj = name
         if not x is None:
-            self.add_constraint("pos", [(1, obj.xvar)], Relation.EQ, x)
+            self.add_constraint("posx", [(1, obj.x())], Relation.EQ, x)
         if not y is None:
-            self.add_constraint("pos", [(1, obj.yvar)], Relation.EQ, y)
+            self.add_constraint("posy", [(1, obj.y())], Relation.EQ, y)
 
-    def get_var(self, name: str, suffix: str, v: Union[float, DVar, None]) -> DVar:
-        if v is None:
-            return DVar(self, name + "?" + suffix, 0, None)
-        elif isinstance(v, DVar):
-            return v
-        else:
-            return DVar(self, name + "?" + suffix, v, v)
+    def get_var(
+        self, name: str, lbound: Union[float, None], ubound: Union[float, None]
+    ) -> DVar:
+        return DVar(self, name, lbound, ubound)
 
     def point(
         self, name: str, x: Optional[float] = None, y: Optional[float] = None
@@ -745,29 +715,11 @@ class Diagram(object):
         assert isinstance(x, (float, int))
         assert x >= 0 and x <= 1
         if x == 0:
-            self.same(v, v1)
+            self.samev(v, v1)
         if x == 1:
-            self.same(v, v2)
+            self.samev(v, v2)
         self.add_constraint("a", [(1 - x, v1), (x, v2), (-1, v)], Relation.EQ, 0)
         return v
-
-    def port(self, t: Thing, pos: float):
-        if pos < 0 or pos > 40:
-            raise Exception("out of bounds: " + str(p))
-        p = self.point("a")
-        if pos < 10:
-            self.convex_comb(p.x(), pos / 10.0, t.point().x(), t.p2().x())
-            self.samev(p.y(), t.point().y())
-        elif pos < 20:
-            self.samev(p.x(), t.p2().x())
-            self.convex_comb(p.y(), (pos - 10) / 10, t.point().y(), t.p2().y())
-        elif pos < 30:
-            self.convex_comb(p.x(), 1 - (pos - 20) / 10.0, t.point().x(), t.p2().x())
-            self.samev(p.y(), t.p2().y())
-        else:
-            self.samev(p.x(), t.point().x())
-            self.convex_comb(p.y(), 1 - (pos - 30) / 10, t.point().y(), t.p2().y())
-        return p
 
     # a connection line
     def cline(
@@ -872,7 +824,7 @@ class Diagram(object):
             problem.addConstraint(l, operator, cons.const)
         return (problem, d, dglpk)
 
-    def solve_problem(self):
+    def solve_problem(self, verbose=False):
         var_list = []
         for v in self.vars:
             var_list.append((v.id, v.lbound, v.ubound))
@@ -893,7 +845,9 @@ class Diagram(object):
         for v in self.vars:
             objective.append((1, v.id))
 
-        sol = ortools_solver.solve(var_list, cons_list, objective, "min")
+        sol = ortools_solver.solve(
+            var_list, cons_list, objective, "min", verbose=verbose
+        )
         return sol
 
     def create_svg(self, values: dict[str, float]) -> list[Stuff]:
@@ -951,8 +905,8 @@ class Diagram(object):
             c = webbrowser.get("firefox")
             c.open("file://" + filename, autoraise=False)
 
-    def show(self) -> None:
-        res = self.solve_problem()
+    def show(self, verbose=False) -> None:
+        res = self.solve_problem(verbose)
         with tempfile.NamedTemporaryFile(mode="w", suffix=".svg", delete=False) as f:
             filename = f.name
             print("SVG Filename:" + filename)

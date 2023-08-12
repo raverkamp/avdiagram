@@ -3,15 +3,16 @@ import ortools
 from ortools.linear_solver import pywraplp
 
 
-def solve(variables, constraints, objective, min_or_max):
+def solve(variables, constraints, objective, min_or_max, verbose=False):
     assert min_or_max in ("min", "max")
-    """print("variables")
-    pp.pprint(variables)
-    print("constraints")
-    pp.pprint(constraints)
-    print("objective")
-    pp.pprint(objective)
-    pp.pprint(min_or_max)"""
+    if verbose:
+        print("variables")
+        pp.pprint(variables)
+        print("constraints")
+        pp.pprint(constraints)
+        print("objective")
+        pp.pprint(objective)
+        pp.pprint(min_or_max)
 
     solver = pywraplp.Solver.CreateSolver("GLOP")
 
@@ -83,4 +84,6 @@ def solve(variables, constraints, objective, min_or_max):
     res = {}
     for vname in var_dict:
         res[vname] = var_dict[vname].solution_value()
+    if verbose:
+        pp.pprint(res)
     return res

@@ -23,7 +23,7 @@ def cmd_example1(args) -> None:
 
     d.ralign([t4, t5, t6])
 
-    d.left("t1", mm(100), "t4")
+    d.left(t1, mm(100), t4)
 
     p1 = d.point("p1_40_30", mm(40), mm(30))
     p2 = d.point("p1_50_20_off")
@@ -52,7 +52,7 @@ def cmd_example2(args):
     d.same(r.point(), tl.point())
     d.samev(r.width(), tl.width())
     d.samev(r.height(), tl.height())
-    d.show()
+    d.show(True)
 
 
 def mk_box(
@@ -124,12 +124,12 @@ def cmd_example4(args):
     d.samev(r1.point().y(), r3.point().y())
 
     l = Line(d, "A", 1)
-    d.same(d.port(r1, 12), l.p1())
-    d.same(d.port(r3, 32), l.p2())
+    d.same(r1.port(12), l.p1())
+    d.same(r3.port(32), l.p2())
 
     l = Line(d, "A", 1)
-    d.same(d.port(r1, 27), l.p1())
-    d.same(d.port(r2, 2), l.p2())
+    d.same(r1.port(27), l.p1())
+    d.same(r2.port(2), l.p2())
 
     d.show()
 
