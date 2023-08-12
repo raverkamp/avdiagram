@@ -127,10 +127,6 @@ def flatten(s: Any) -> List[Union[str, Base]]:
     return res
 
 
-class Thing(Base):
-    pass
-
-
 class Line(Base):
     def __init__(self, d: "Diagram", name: str, line_width: float):
         self.name = name
@@ -178,8 +174,11 @@ class Line(Base):
             color="green",
         )
 
+class Thing(Base):
+    pass
 
-class Rectangle(Base):
+
+class Rectangle(Thing):
     def __init__(self, d: "Diagram", name: str, line_width: float, color: str):
         self.name = name
         self._p1 = d.point(newid(name))
@@ -614,7 +613,7 @@ class Diagram(object):
                 sum1.append((-1, obj.point().y()))
                 sum1.append((-1, obj.height()))
             else:
-                raise Exception("unknown")
+                raise Exception("unknown:" + repr(obj))
             self.add_constraint("left1", sum1, Relation.GE, c)
 
         for kobj in l2:
@@ -739,14 +738,45 @@ class Diagram(object):
         dtab = DTable(self, tab.name, tab, font)
         return dtab
 
+    def convex_comb(self, v:DVar, x:float, v1:DVar, v2:DVar):
+        assert isinstance(v1, DVar)
+        assert isinstance(v2, DVar)
+        assert isinstance(x, (float, int))
+        assert x>=0 and x <=1
+        if x == 0:
+            self.same(v,v1)
+        if x == 1:
+            self.same(v,v2)
+        self.add_constraint("a", [(1-x,v1), (x,v2), (-1,v)],Relation.EQ,0)
+        return v
+        
+    
+    def port(self, t:Thing, pos:float):
+        if pos <0 or pos>40:
+            raise Exception("out of bounds: " + str(p))
+        p = self.point("a")
+        if pos<10:
+            self.convex_comb(p.x(),pos/10.0, t.point().x(), t.p2().x())
+            self.samev(p.y(),t.point().y())
+        elif pos <20:
+            self.samev(p.x(), t.p2().x())
+            self.convex_comb(p.y(),(pos-10)/10,t.point().y(), t.p2().y())
+        elif pos<30:
+            self.convex_comb(p.x(),1-(pos-20)/10.0, t.point().x(), t.p2().x())
+            self.samev(p.y(),t.p2().y())
+        else:
+            self.samev(p.x(), t.point().x())
+            self.convex_comb(p.y(),1-(pos-30)/10,t.point().y(), t.p2().y())
+        return p
+
     # a connection line
     def cline(
         self,
-        t1: Union[str, Thing],
+        t1: Thing,
         p1: float,
-        t2: Union[str, Thing],
+        t2: Thing,
         p2: float,
-        liste: List[Union[str, Point]] = [],
+        liste: List[Point] = [],
     ) -> None:
         a1 = t1
         if not isinstance(a1, Thing):
