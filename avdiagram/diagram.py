@@ -11,6 +11,7 @@ from .svg import (
     Tag,
     Stuff,
     rect,
+    points,
 )
 import math
 from enum import Enum
@@ -128,12 +129,11 @@ def flatten(s: Any) -> List[Base]:
 class Line(Base):
     def __init__(self, d: "Diagram", name: str, line_width: float):
         super().__init__(d, name)
-        self._p1 = d.point(newid(name))
-        self._p2 = d.point(newid(name))
+        self._p1 = d.point(name + "-p1")
+        self._p2 = d.point(name + "-p2")
         self.line_width = line_width
         self._width = None
         self._height = None
-        self.diagram = d
         d.add_object(name, self)
 
     def point(self):
@@ -153,6 +153,75 @@ class Line(Base):
             env(self.p2().y()),
             color="green",
         )
+
+
+class Arrow(Base):
+    def __init__(
+        self,
+        d: "Diagram",
+        name: str,
+        width: float,
+        color: str = "#a0a0a0",
+        line_color: str = "#000000",
+        line_width: float = 0,
+    ):
+        super().__init__(d, name)
+        self._p1 = d.point(name + "-p1")
+        self._p2 = d.point(name + "-p2")
+        self._width = width
+        self._color = color
+        self._line_color = line_color
+        self._line_width = line_width
+        d.add_object(name, self)
+
+    def point(self):
+        return self.p1()
+
+    def p1(self):
+        return self._p1
+
+    def p2(self):
+        return self._p2
+
+    def to_svg(self, env) -> Tag:
+        p1x = env(self.p1().x())
+        p1y = env(self.p1().y())
+        p2x = env(self.p2().x())
+        p2y = env(self.p2().y())
+        width = self._width
+        wo = width * 2
+        ah = wo / 2
+        l = math.sqrt((p2x - p1x) ** 2 + (p2y - p1y) ** 2)
+        if ah >= l:
+            ah = l
+            wo = ah * 2
+            width = wo
+        il = l - ah
+
+        points_ = [
+            (0, width / 2),
+            (il, width / 2),
+            (il, wo / 2),
+            (l, 0),
+            (il, -wo / 2),
+            (il, -width / 2),
+            (0, -width / 2),
+        ]
+
+        a = Tag(
+            "polygon",
+            {
+                "fill": self._color,
+                "stroke": self._line_color,
+                "stroke-width": str(self._line_width),
+                "points": points(points_),
+            },
+            None,
+        )
+        b = Tag(
+            "g", {"transform": f"rotate({180/math.pi*math.atan2(p2y-p1y,p2x-p1x)})"}, a
+        )
+        return Tag("g", {"transform": f"translate({p1x} {p1y})"}, b)
 
 
 class Thing(Base):

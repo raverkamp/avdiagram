@@ -1,5 +1,5 @@
 import argparse
-from avdiagram import cm, mm, Diagram, Table, Column, Rectangle, Relation, Line
+from avdiagram import cm, mm, Diagram, Table, Column, Rectangle, Relation, Line, Arrow
 
 
 def cmd_example1(args) -> None:
@@ -134,6 +134,24 @@ def cmd_example4(args):
     d.show()
 
 
+def cmd_example5(args):
+    d = Diagram(cm(20), cm(20), True)
+
+    p1 = d.point("A", mm(20), mm(20))
+    p2 = d.point("B", mm(90), mm(90))
+    p3 = d.point("C", mm(10), mm(90))
+
+    a1 = Arrow(d, "A1", mm(10))
+
+    a2 = Arrow(d, "A2", mm(5), color="#ffa0a0", line_width=1, line_color="red")
+
+    d.same(p1, a1.p1())
+    d.same(p2, a1.p2())
+    d.same(p1, a2.p1())
+    d.same(p3, a2.p2())
+    d.show()
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="Examples",
@@ -153,6 +171,9 @@ def main():
 
     p_ex4 = subparsers.add_parser("ex4")
     p_ex4.set_defaults(func=cmd_example4)
+
+    p_ex5 = subparsers.add_parser("ex5")
+    p_ex5.set_defaults(func=cmd_example5)
 
     args = parser.parse_args()
     args.func(args)

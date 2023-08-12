@@ -8,4 +8,5 @@ from .diagram import (
     Line,
     Rectangle,
     Relation,
+    Arrow,
 )
