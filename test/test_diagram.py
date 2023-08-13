@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from avdiagram import diagram, mm
+from tempfile import NamedTemporaryFile
 
 
 class Test_simple(unittest.TestCase):
@@ -11,11 +12,13 @@ class Test_simple(unittest.TestCase):
         t1 = d.text("t1", "abc", 12)
         t2 = d.text("t2", "xyz", 12)
         d.over(t1, mm(2), t2)
-        (_, a) = tempfile.mkstemp()
+        f = NamedTemporaryFile(delete=False)
+        file_name = f.name
+        f.close()
         try:
-            x = d.run(a)
+            x = d.run(file_name)
         finally:
-            os.remove(a)
+            os.remove(file_name)
         self.assertTrue(x)
 
     def test_fail(self):
@@ -24,11 +27,13 @@ class Test_simple(unittest.TestCase):
         t2 = d.text("t2", "xyz", 12)
         d.over(t1, mm(2), t2)
         d.over(t2, mm(2), t1)
-        (_, a) = tempfile.mkstemp()
+        f = NamedTemporaryFile(delete=False)
+        file_name = f.name
+        f.close()
         try:
-            x = d.run(a)
+            x = d.run(file_name)
         finally:
-            os.remove(a)
+            os.remove(file_name)
         self.assertFalse(x)
 
     def test_fail2(self):
