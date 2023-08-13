@@ -152,6 +152,32 @@ def cmd_example5(args):
     d.show()
 
 
+def cmd_example6(args):
+    d = Diagram(cm(20), cm(20), True)
+
+    r = Rectangle(d, "R", line_width=2, color="none")
+
+    r1 = Rectangle(d, "R1", line_width=1, color="#ff0000")
+    r2 = Rectangle(d, "R2", line_width=1, color="#ff0000")
+
+    p = d.point("AAA", mm(10), mm(10))
+
+    d.same(r1.point(), p)
+
+    d.add_constraint("C1", [(1, r1.width())], Relation.EQ, mm(20))
+    d.add_constraint("C2", [(1, r1.height())], Relation.EQ, mm(40))
+
+    d.samev(r1.width(), r2.height())
+    d.samev(r1.height(), r2.width())
+
+    d.left(r1, mm(10), r2)
+    d.over(r1, mm(20), r2)
+
+    d.around(r.p1(), r.p2(), [r1, r2])
+
+    d.show(True)
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="Examples",
@@ -174,6 +200,9 @@ def main():
 
     p_ex5 = subparsers.add_parser("ex5")
     p_ex5.set_defaults(func=cmd_example5)
+
+    p_ex6 = subparsers.add_parser("ex6")
+    p_ex6.set_defaults(func=cmd_example6)
 
     args = parser.parse_args()
     args.func(args)

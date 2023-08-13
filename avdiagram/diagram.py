@@ -68,7 +68,7 @@ class DVar(object):
         name: str,
         lbound: Optional[float],
         ubound: Optional[float],
-        objective: Optional[float],
+        objective: float,
     ):
         self.id = newid(name)
         self.name = name
@@ -78,7 +78,7 @@ class DVar(object):
         if not ubound is None and not lbound is None:
             assert lbound <= ubound, "fail"
             self.fixed = lbound >= ubound
-        self.objective = 1
+        self.objective = objective
         self.parent.vars.append(self)
 
 
@@ -766,6 +766,51 @@ class Diagram(object):
         if not y is None:
             self.add_constraint("FIX", [(1, point.y())], Relation.EQ, y)
         return point
+
+    def bound(self, var: DVar, l: List[DVar], up: bool):
+        rel = Relation.LE if up else Relation.GE
+        x = "up" if up else "lower"
+        coeff = []
+        for v in l:
+            self.add_constraint("bounding-" + x, [(1, v), (-1, var)], rel, 0)
+            coeff.append((1, v))
+        if up:
+            v2 = self.get_var("boundvar-" + x, None, None, -1000)
+        else:
+            v2 = self.get_var("boundvar-" + x, None, None, 1000)
+        coeff.append((-len(l), var))
+        coeff.append((-1, v2))
+        self.add_constraint("def-boundvar-" + x, coeff, Relation.EQ, 0)
+
+    def topb(self, var: DVar, objs):
+        l = []
+        for obj in flatten(objs):
+            l.append(obj.p1().y())
+        self.bound(var, l, False)
+
+    def leftb(self, var: DVar, objs):
+        l = []
+        for obj in flatten(objs):
+            l.append(obj.p1().x())
+        self.bound(var, l, False)
+
+    def bottomb(self, var: DVar, objs):
+        l = []
+        for obj in flatten(objs):
+            l.append(obj.p2().y())
+        self.bound(var, l, True)
+
+    def rightb(self, var: DVar, objs):
+        l = []
+        for obj in flatten(objs):
+            l.append(obj.p2().x())
+        self.bound(var, l, True)
+
+    def around(self, p1: Point, p2: Point, objs):
+        self.topb(p1.y(), objs)
+        self.leftb(p1.x(), objs)
+        self.bottomb(p2.y(), objs)
+        self.rightb(p2.x(), objs)
 
     def add_object(self, name, o):
         self.object_list.append(o)
