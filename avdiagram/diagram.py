@@ -68,6 +68,7 @@ class DVar(object):
         name: str,
         lbound: Optional[float],
         ubound: Optional[float],
+        objective: Optional[float],
     ):
         self.id = newid(name)
         self.name = name
@@ -77,6 +78,7 @@ class DVar(object):
         if not ubound is None and not lbound is None:
             assert lbound <= ubound, "fail"
             self.fixed = lbound >= ubound
+        self.objective = 1
         self.parent.vars.append(self)
 
 
@@ -733,9 +735,13 @@ class Diagram(object):
             self.add_constraint("posy", [(1, obj.y())], Relation.EQ, y)
 
     def get_var(
-        self, name: str, lbound: Union[float, None], ubound: Union[float, None]
+        self,
+        name: str,
+        lbound: Optional[float],
+        ubound: Optional[float],
+        objective: float = 1,
     ) -> DVar:
-        return DVar(self, name, lbound, ubound)
+        return DVar(self, name, lbound, ubound, objective)
 
     def point(
         self, name: str, x: Optional[float] = None, y: Optional[float] = None
@@ -912,7 +918,7 @@ class Diagram(object):
 
         objective = []
         for v in self.vars:
-            objective.append((1, v.id))
+            objective.append((v.objective, v.id))
 
         sol = ortools_solver.solve(
             var_list, cons_list, objective, "min", verbose=verbose
