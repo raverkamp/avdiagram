@@ -25,8 +25,8 @@ def cmd_example1(args) -> None:
 
     d.left(t1, mm(100), t4)
 
-    p1 = d.point("p1_40_30", mm(40), mm(30))
-    p2 = d.point("p1_50_20_off")
+    p1 = d.point("p1_40_30", mm(40), mm(30), True)
+    p2 = d.point("p1_50_20_off", None, None, True)
     d.over(p1, mm(50), p2)
     d.left(p1, mm(20), p2)
 

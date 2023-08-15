@@ -309,18 +309,22 @@ class Rectangle(Thing):
 
 
 class Point(Base):
-    def __init__(self, d: "Diagram", name: str):
+    def __init__(self, d: "Diagram", name: str, visible: Optional[bool] = False):
         assert isinstance(d, Diagram)
         assert isinstance(name, str)
         super().__init__(d, name)
 
         self._xvar = d.get_var(name + "-x", 0, None)
         self._yvar = d.get_var(name + "-y", 0, None)
+        self.visible = visible
 
         d.add_object(name, self)
 
     def point(self):
         return self
+
+    def set_visible(self, v: bool):
+        self.visible = v
 
     def x(self):
         return self._xvar
@@ -329,15 +333,18 @@ class Point(Base):
         return self._yvar
 
     def to_svg(self, env) -> Tag:
-        return translate(
-            env(self.x()),
-            env(self.y()),
-            [
-                line(-10, 0, 10, 0, color="red"),
-                line(0, -10, 0, 10, color="red"),
-                text(10, -10, self.name),
-            ],
-        )
+        if self.visible:
+            return translate(
+                env(self.x()),
+                env(self.y()),
+                [
+                    line(-10, 0, 10, 0, color="red"),
+                    line(0, -10, 0, 10, color="red"),
+                    text(10, -10, self.name),
+                ],
+            )
+        else:
+            return []
 
 
 #  diagram table
@@ -744,10 +751,14 @@ class Diagram(object):
         return DVar(self, name, lbound, ubound, objective)
 
     def point(
-        self, name: str, x: Optional[float] = None, y: Optional[float] = None
+        self,
+        name: str,
+        x: Optional[float] = None,
+        y: Optional[float] = None,
+        visible: Optional[bool] = False,
     ) -> Point:
         assert isinstance(name, str)
-        point = Point(self, name)
+        point = Point(self, name, visible)
         if not x is None:
             self.add_constraint("FIX", [(1, point.x())], Relation.EQ, x)
         if not y is None:
