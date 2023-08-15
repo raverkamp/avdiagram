@@ -160,7 +160,7 @@ def cmd_example6(args):
     r1 = Rectangle(d, "R1", line_width=1, color="#ff0000")
     r2 = Rectangle(d, "R2", line_width=1, color="#ff0000")
 
-    p = d.point("AAA", mm(10), mm(10))
+    p = d.point("AAA", mm(20), mm(30))
 
     d.same(r1.point(), p)
 
@@ -173,7 +173,7 @@ def cmd_example6(args):
     d.left(r1, mm(10), r2)
     d.over(r1, mm(20), r2)
 
-    d.around(r.p1(), r.p2(), [r1, r2])
+    d.around(r.p1(), r.p2(), [r1, r2], (mm(2), mm(4), mm(8), mm(16)))
 
     d.show(True)
 

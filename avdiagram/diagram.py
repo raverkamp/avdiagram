@@ -767,12 +767,14 @@ class Diagram(object):
             self.add_constraint("FIX", [(1, point.y())], Relation.EQ, y)
         return point
 
-    def bound(self, var: DVar, l: List[DVar], up: bool):
+    def bound(self, var: DVar, l: List[DVar], up: bool, dist: float):
         rel = Relation.LE if up else Relation.GE
         x = "up" if up else "lower"
         coeff = []
         for v in l:
-            self.add_constraint("bounding-" + x, [(1, v), (-1, var)], rel, 0)
+            self.add_constraint(
+                "bounding-" + x, [(1, v), (-1, var)], rel, -dist if up else dist
+            )
             coeff.append((1, v))
         if up:
             v2 = self.get_var("boundvar-" + x, None, None, -1000)
@@ -782,35 +784,39 @@ class Diagram(object):
         coeff.append((-1, v2))
         self.add_constraint("def-boundvar-" + x, coeff, Relation.EQ, 0)
 
-    def topb(self, var: DVar, objs):
+    def topb(self, var: DVar, objs, dist: float):
         l = []
         for obj in flatten(objs):
             l.append(obj.p1().y())
-        self.bound(var, l, False)
+        self.bound(var, l, False, dist)
 
-    def leftb(self, var: DVar, objs):
+    def leftb(self, var: DVar, objs, dist: float):
         l = []
         for obj in flatten(objs):
             l.append(obj.p1().x())
-        self.bound(var, l, False)
+        self.bound(var, l, False, dist)
 
-    def bottomb(self, var: DVar, objs):
+    def bottomb(self, var: DVar, objs, dist: float):
         l = []
         for obj in flatten(objs):
             l.append(obj.p2().y())
-        self.bound(var, l, True)
+        self.bound(var, l, True, dist)
 
-    def rightb(self, var: DVar, objs):
+    def rightb(self, var: DVar, objs, dist: float):
         l = []
         for obj in flatten(objs):
             l.append(obj.p2().x())
-        self.bound(var, l, True)
+        self.bound(var, l, True, dist)
 
-    def around(self, p1: Point, p2: Point, objs):
-        self.topb(p1.y(), objs)
-        self.leftb(p1.x(), objs)
-        self.bottomb(p2.y(), objs)
-        self.rightb(p2.x(), objs)
+    def around(self, p1: Point, p2: Point, objs: any, bounds):
+        if isinstance(bounds, (float, int)):
+            (t, l, b, r) = (bounds, bounds, bounds, bounds)
+        else:
+            (l, r, t, b) = bounds
+        self.topb(p1.y(), objs, t)
+        self.leftb(p1.x(), objs, l)
+        self.bottomb(p2.y(), objs, b)
+        self.rightb(p2.x(), objs, r)
 
     def add_object(self, name, o):
         self.object_list.append(o)
@@ -959,7 +965,7 @@ class Diagram(object):
                 low = cons.const
             if cons.op in (Relation.LE, Relation.EQ):
                 up = cons.const
-            cons_list.append((newid(), l, low, up))
+            cons_list.append((newid(cons.name), l, low, up))
 
         objective = []
         for v in self.vars:
