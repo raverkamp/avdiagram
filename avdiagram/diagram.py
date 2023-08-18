@@ -829,6 +829,17 @@ class Diagram(object):
         self.bottomb(p2.y(), objs, b)
         self.rightb(p2.x(), objs, r)
 
+    def varcentered(self,vo1:DVar, vo2:DVar, vi1:DVar, vi2:DVar):
+        self.add_constraint("centered", [(1,vi1), (-1, vo1)], Relation.GE,0)
+        self.add_constraint("centered", [(-1,vi2), (1, vo2)], Relation.GE,0)
+        self.add_constraint("centered-same",[(1,vi1), (-1, vo1), (-1,vi2), (1, vo2)],Relation.EQ,0)
+        
+    def centered(self, p1: Point, p2:Point, t: Thing):
+        pass
+        self.varcentered(p1.x(), p2.x(), t.point().x(), t.p2().x())
+        #self.varcentered(p1.y(), p2.y(), t.point().y(), t.p2().y())
+        
+        
     def add_object(self, name, o):
         self.object_list.append(o)
 
