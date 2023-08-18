@@ -1,5 +1,17 @@
 import argparse
-from avdiagram import cm, mm, Diagram, Table, Column, Rectangle, Relation, Line, Arrow
+from avdiagram import (
+    cm,
+    mm,
+    Diagram,
+    Table,
+    Column,
+    Rectangle,
+    Relation,
+    Line,
+    Arrow,
+    Inc12,
+    DTextLines,
+)
 
 
 def cmd_example1(args) -> None:
@@ -177,26 +189,37 @@ def cmd_example6(args):
 
     d.show(True)
 
+
 def cmd_example7(args):
     d = Diagram(cm(50), cm(50), True)
 
-    r = Rectangle(d, "R", line_width=2, color="none")
+    r = Rectangle(d, "R", line_width=2, color="#00ff00")
 
     r1 = Rectangle(d, "R1", line_width=1, color="#ff0000")
-  
+
     p = d.point("AAA", mm(20), mm(30))
 
-    d.same(r1.point(), p)
+    d.same(r.point(), p)
 
-    d.same(r.point(), d.point("AAA", mm(10), mm(20)))
+    # d.same(r.point(), d.point("AAA", mm(10), mm(20)))
 
     d.add_constraint("C1", [(1, r1.width())], Relation.EQ, mm(20))
     d.add_constraint("C2", [(1, r1.height())], Relation.EQ, mm(40))
 
-    #d.diffv(r.width(),r1.width(), mm(50))
-    #d.diffv(r.height(),d.zero_var,mm(150))
+    d.diffv(r.width(), r1.width(), mm(40))
+    d.diffv(r.height(), r1.height(), mm(15))
 
     d.centered(r.p1(), r.p2(), r1)
+
+    r2 = Rectangle(d, "R", color="#aaffaa", line_width=2)
+
+    t = DTextLines(d, "bla", ["Hans Dampf", "in allen Gassen"], Inc12, 1)
+
+    d.centered(r2.p1(), r2.p2(), t)
+    d.diffv(r2.width(), t.width(), mm(40))
+    d.left(r, mm(5), r2)
+    d.over(r, mm(10), r2)
+
     d.show(True)
 
 

@@ -9,4 +9,6 @@ from .diagram import (
     Rectangle,
     Relation,
     Arrow,
+    Inc12,
+    DTextLines,
 )
