@@ -1,4 +1,5 @@
 import collections
+from collections.abc import Sequence
 from collections import namedtuple
 from .svg import (
     Font,
@@ -12,6 +13,7 @@ from .svg import (
     Stuff,
     rect,
     points,
+    empty_tag,
 )
 import math
 from enum import Enum
@@ -344,7 +346,7 @@ class Point(Base):
                 ],
             )
         else:
-            return []
+            return empty_tag
 
 
 #  diagram table
@@ -781,7 +783,7 @@ class Diagram(object):
     def bound(self, var: DVar, l: List[DVar], up: bool, dist: float):
         rel = Relation.LE if up else Relation.GE
         x = "up" if up else "lower"
-        coeff = []
+        coeff: List[Tuple[float, DVar]] = []
         for v in l:
             self.add_constraint(
                 "bounding-" + x, [(1, v), (-1, var)], rel, -dist if up else dist
@@ -798,28 +800,34 @@ class Diagram(object):
     def topb(self, var: DVar, objs, dist: float):
         l = []
         for obj in flatten(objs):
-            l.append(obj.p1().y())
+            l.append(obj.point().y())
         self.bound(var, l, False, dist)
 
     def leftb(self, var: DVar, objs, dist: float):
         l = []
         for obj in flatten(objs):
-            l.append(obj.p1().x())
+            l.append(obj.point().x())
         self.bound(var, l, False, dist)
 
     def bottomb(self, var: DVar, objs, dist: float):
         l = []
         for obj in flatten(objs):
-            l.append(obj.p2().y())
+            if isinstance(obj, Thing):
+                l.append(obj.p2().y())
+            else:
+                l.append(obj.point().y())
         self.bound(var, l, True, dist)
 
     def rightb(self, var: DVar, objs, dist: float):
         l = []
         for obj in flatten(objs):
-            l.append(obj.p2().x())
+            if isinstance(obj, Thing):
+                l.append(obj.p2().x())
+            else:
+                l.append(obj.point().x())
         self.bound(var, l, True, dist)
 
-    def around(self, p1: Point, p2: Point, objs: any, bounds):
+    def around(self, p1: Point, p2: Point, objs: Any, bounds):
         if isinstance(bounds, (float, int)):
             (t, l, b, r) = (bounds, bounds, bounds, bounds)
         else:

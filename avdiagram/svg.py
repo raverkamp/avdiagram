@@ -41,6 +41,8 @@ class Tag(NamedTuple):
     content: Optional["Stuff"]
 
 
+empty_tag = Tag("g", {}, None)
+
 Stuff = Union[str, List["Stuff"], Tag, Raw]
 
 defs = Raw(
@@ -164,7 +166,7 @@ def render(l: list[str], x: Stuff) -> None:
     elif isinstance(x, list):
         for y in x:
             render(l, y)
-    elif isinstance(x, Tag):
+    elif isinstance(x, Tag) and x != empty_tag:
         rendertag(l, x)
     else:
         raise Exception("unknown content: " + repr(x))
