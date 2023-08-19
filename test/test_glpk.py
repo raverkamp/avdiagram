@@ -4,21 +4,21 @@ from avdiagram import glpk
 
 
 class Test_simple(unittest.TestCase):
-    def test_success(self):
-        p = glpk.Problem()
-        v = p.addvar("a", 0, 2)
-        p.addConstraint([(v, 1)], "GE", 1)
-        p.setObjective("MIN", [(v, 1)])
-        self.assertTrue(p.run())
-        self.assertEqual(v.value, 1)
 
-    def test_fail(self):
-        p = glpk.Problem()
-        v = p.addvar("a", -1, 0)
-        p.addConstraint([(v, 1)], "GE", 1)
-        p.setObjective("MIN", [(v, 1)])
-        self.assertFalse(p.run())
+    def test_simple(self):
+        vars = [("x", None, None), ("y", None, None)]
+        cons = [
+            ("c1", [(1, "x"), (2, "y")], None, 14),
+            ("c2", [(3, "x"), (-1, "y")], 0, None),
+            ("c3", [(1, "x"), (-1, "y")], None, 2),
+        ]
+        obj = [(3, "x"), (4, "y")]
+
+        res = glpk.solve_problem(vars, cons, obj, "max")
+        self.assertAlmostEqual(6, res["x"])
+        self.assertAlmostEqual(4, res["y"])
 
 
+        
 if __name__ == "__main__":
     unittest.main()

@@ -166,8 +166,9 @@ def render(l: list[str], x: Stuff) -> None:
     elif isinstance(x, list):
         for y in x:
             render(l, y)
-    elif isinstance(x, Tag) and x != empty_tag:
-        rendertag(l, x)
+    elif isinstance(x, Tag):
+        if x != empty_tag:
+            rendertag(l, x)
     else:
         raise Exception("unknown content: " + repr(x))
 

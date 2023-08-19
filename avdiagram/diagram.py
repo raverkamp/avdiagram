@@ -1,6 +1,15 @@
 import collections
 from collections.abc import Sequence
 from collections import namedtuple
+from enum import Enum
+import math
+import tempfile
+from typing import List, Optional, Union, Any, Tuple, Callable, cast
+import webbrowser
+
+USE_GLPK = True
+
+
 from .svg import (
     Font,
     polyline,
@@ -15,13 +24,11 @@ from .svg import (
     points,
     empty_tag,
 )
-import math
-from enum import Enum
+
 from . import glpk
 from . import ortools_solver
-from typing import List, Optional, Union, Any, Tuple, Callable, cast
-import webbrowser
-import tempfile
+
+from . import solver
 
 
 def mk_counter() -> Callable[[], str]:
@@ -959,27 +966,6 @@ class Diagram(object):
         s = s + "{0},{1} {2},{3}".format(cx2, cy2, x2, y2)
         return path(s, width=2, marker_end="url(#Triangle)")
 
-    def enforce(self) -> Tuple[glpk.Problem, dict[str, DVar], dict[str, glpk.Var]]:
-        problem = glpk.Problem()
-        d: dict[str, DVar] = dict()
-        dglpk: dict[str, glpk.Var] = dict()
-
-        for var in self.vars:
-            d[var.id] = var
-            dglpk[var.id] = problem.addvar(var.id, var.lbound, var.ubound)
-
-        for cons in self.constraints:
-            l = []
-            for fac, var in cons.sums:
-                l.append((dglpk[var.id], fac))
-            operator = (
-                "GE"
-                if cons.op == Relation.GE
-                else ("LE" if cons.op == Relation.LE else "EQ")
-            )
-            problem.addConstraint(l, operator, cons.const)
-        return (problem, d, dglpk)
-
     def solve_problem(self, verbose=False):
         var_list = []
         for v in self.vars:
@@ -1001,7 +987,13 @@ class Diagram(object):
         for v in self.vars:
             objective.append((v.objective, v.id))
 
-        sol = ortools_solver.solve(
+        # sol = ortools_solver.solve(
+        #    var_list, cons_list, objective, "min", verbose=verbose
+        if USE_GLPK:
+            solver = glpk.GLPKSolver()
+        else:
+            solver = ortools_solver.ORToolsSolver()
+        sol = solver.solve_problem(
             var_list, cons_list, objective, "min", verbose=verbose
         )
         return sol
@@ -1035,22 +1027,6 @@ class Diagram(object):
             paa = self.bpath(env, o1, p1, o2, p2, liste)
             l.append(paa)
         return l
-
-    def run(self, filename: str) -> bool:
-        (problem, d, dglpk) = self.enforce()
-        objective: List[Tuple[glpk.Var, float]] = []
-        for v in self.vars:
-            objective.append((dglpk[v.id], 1))
-
-        problem.setObjective("MIN", objective)
-        if not problem.run():
-            return False
-        values: dict[str, float] = {}
-        for vv in d:
-            values[vv] = dglpk[vv].value
-        l = self.create_svg(values)
-        render_file(filename, self.width, self.height, [l])
-        return True
 
     def show2(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".svg", delete=False) as f:

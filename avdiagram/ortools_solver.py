@@ -2,8 +2,10 @@ import pprint as pp
 import ortools
 from ortools.linear_solver import pywraplp
 
+from .solver import Solver
 
-def solve(variables, constraints, objective, min_or_max, verbose=False):
+
+def solve_problem(variables, constraints, objective, min_or_max, verbose=False):
     assert min_or_max in ("min", "max")
     if verbose:
         print("variables")
@@ -87,3 +89,13 @@ def solve(variables, constraints, objective, min_or_max, verbose=False):
     if verbose:
         pp.pprint(res)
     return res
+
+
+class ORToolsSolver(Solver):
+    def __init__(self):
+        pass
+
+    def solve_problem(
+        self, variables, constraints, objective, min_or_max, verbose=False
+    ):
+        return solve_problem(variables, constraints, objective, min_or_max, verbose)
