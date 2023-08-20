@@ -120,6 +120,45 @@ class Base(object):
     def to_svg(self, env) -> Tag:
         raise NotImplementedError()
 
+class Point(Base):
+    def __init__(self, d: "Diagram", name: str, visible: Optional[bool] = False):
+        assert isinstance(d, Diagram)
+        assert isinstance(name, str)
+        super().__init__(d, name)
+
+        self._xvar = d.get_var(name + "-x", 0, None)
+        self._yvar = d.get_var(name + "-y", 0, None)
+        self.visible = visible
+
+        d.add_object(name, self)
+
+    def point(self):
+        return self
+
+    def set_visible(self, v: bool):
+        self.visible = v
+
+    def x(self):
+        return self._xvar
+
+    def y(self):
+        return self._yvar
+
+    def to_svg(self, env) -> Tag:
+        if self.visible:
+            return translate(
+                env(self.x()),
+                env(self.y()),
+                [
+                    line(-10, 0, 10, 0, color="red"),
+                    line(0, -10, 0, 10, color="red"),
+                    text(10, -10, self.name),
+                ],
+            )
+        else:
+            return empty_tag
+
+
 
 def flatten(s: Any) -> List[Base]:
     def flatten_internal(l: Any, res: List[Base]) -> None:
@@ -165,6 +204,74 @@ class Line(Base):
             color="green",
         )
 
+class CLine(Base):
+
+    def __init__(self, d: "Diagram", name: str, points: List[Point], normal1: tuple[float, float],
+                 normal2:tuple[float, float]):
+        assert isinstance(points, list)
+        assert len(points) >=2
+        super().__init__(d, name)
+        self.points = list(points)
+        self.normal1 = normal1
+        self.normal2 = normal2
+        self.d = 50
+        d.add_object(name, self)
+
+    def point(self):
+        return self.p1()
+
+    def p1(self):
+        return self.points[0]
+
+    def p2(self):
+        return self.points[-1]
+
+
+    def bseg(
+        self, x1: float, y1: float, mx: float, my: float, x2: float, y2: float, d: float
+    ) -> str:
+        (cx, cy) = cpfor(x1, y1, mx, my, x2, y2, d)
+        return "{0} {1} ,  {2} {3}   ".format(cx, cy, mx, my)
+
+    def to_svg(self, env) -> Tag:
+
+        p1 = self.points[0]
+        p2 = self.points[-1]
+        # the start and endpoints
+        x1 = round(env(p1.x()))
+        y1 = round(env(p1.y()))
+        x2 = round(env(p2.x()))
+        y2 = round(env(p2.y()))
+
+
+        # the control points for the endpoints
+        #xxx
+        (dx,dy) = vnormalize(self.normal1[0], self.normal1[1], self.d)
+        cx1 = x1 + dx
+        cy1 = y1 + dy
+
+        (dx,dy) = vnormalize(self.normal2[0], self.normal2[1], self.d)
+        cx2 = x2 + dx
+        cy2 = y2 + dy
+
+        s = "M {0} {1} C {2} {3}, ".format(x1, y1, cx1, cy1)
+        ox = x1
+        oy = y1
+        liste = self.points[1:-1]
+        for i in range(len(liste)):
+            mx = round(env(liste[i].x()))
+            my = round(env(liste[i].y()))
+
+            if i == len(liste) - 1:
+                nx = x2
+                ny = y2
+            else:
+                nx = round(env(liste[i + 1].x()))
+                ny = round(env(liste[i + 1].y()))
+            s = s + self.bseg(ox, oy, mx, my, nx, ny, self.d) + " S "
+            
+        s = s + "{0} {1}, {2} {3}".format(cx2, cy2, x2, y2)
+        return path(s, width=2, marker_end="url(#Triangle)")
 
 class Arrow(Base):
     def __init__(
@@ -315,45 +422,6 @@ class Rectangle(Thing):
             color=self._color,
             line_width=self._line_width,
         )
-
-
-class Point(Base):
-    def __init__(self, d: "Diagram", name: str, visible: Optional[bool] = False):
-        assert isinstance(d, Diagram)
-        assert isinstance(name, str)
-        super().__init__(d, name)
-
-        self._xvar = d.get_var(name + "-x", 0, None)
-        self._yvar = d.get_var(name + "-y", 0, None)
-        self.visible = visible
-
-        d.add_object(name, self)
-
-    def point(self):
-        return self
-
-    def set_visible(self, v: bool):
-        self.visible = v
-
-    def x(self):
-        return self._xvar
-
-    def y(self):
-        return self._yvar
-
-    def to_svg(self, env) -> Tag:
-        if self.visible:
-            return translate(
-                env(self.x()),
-                env(self.y()),
-                [
-                    line(-10, 0, 10, 0, color="red"),
-                    line(0, -10, 0, 10, color="red"),
-                    text(10, -10, self.name),
-                ],
-            )
-        else:
-            return empty_tag
 
 
 #  diagram table
@@ -541,6 +609,10 @@ def posfornumbase(wi: float, he: float, p: float) -> Tuple[float, float]:
 def vlen(x: float, y: float) -> float:
     return math.sqrt(x * x + y * y)
 
+def vnormalize(x: float,y:float,d:float)->tuple[float, float]:
+    le = vlen(x,y)
+    return (x*d/le, y*d/le)
+
 
 # controlpoint computation
 # the curve goes from point (x1,x2) over (mx,my) to (x2,y2)
@@ -553,7 +625,7 @@ def cpfor(
     x1: float, y1: float, mx: float, my: float, x2: float, y2: float, d: float
 ) -> Tuple[float, float]:
     dx = x2 - x1
-    dy = y1 - y2
+    dy = y2 - y1
     da = vlen(dx, dy)
 
     # is this a sane default? better prependicular to point 1 and point m?
@@ -574,9 +646,6 @@ def cpfor(
     else:
         f = 1
     return (mx - f * ddx, my - f * ddy)
-
-
-# from solver import *
 
 
 class Diagram(object):
@@ -987,8 +1056,6 @@ class Diagram(object):
         for v in self.vars:
             objective.append((v.objective, v.id))
 
-        # sol = ortools_solver.solve(
-        #    var_list, cons_list, objective, "min", verbose=verbose
         if USE_GLPK:
             solver = glpk.GLPKSolver()
         else:
@@ -1027,15 +1094,6 @@ class Diagram(object):
             paa = self.bpath(env, o1, p1, o2, p2, liste)
             l.append(paa)
         return l
-
-    def show2(self) -> None:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".svg", delete=False) as f:
-            filename = f.name
-            print("SVG Filename:" + filename)
-            if not self.run(filename):
-                raise Exception("no solution for diagram found")
-            c = webbrowser.get("firefox")
-            c.open("file://" + filename, autoraise=False)
 
     def show(self, verbose=False) -> None:
         res = self.solve_problem(verbose)

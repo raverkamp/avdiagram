@@ -1,7 +1,7 @@
+"""a module to generate SVG"""
+
 from collections import namedtuple
 from typing import List, Optional, Union, Any, Tuple, Callable, NamedTuple
-
-"""a module to generate SVG"""
 
 
 def merge_dicts(d1: dict[str, Any], d2: dict[str, Any]) -> dict[str, Any]:

@@ -153,7 +153,6 @@ def solve_problem(variables, constraints, objective, min_or_max, verbose=False):
     for var_name in var_dict:
         index = var_dict[var_name]
         res[var_name] = solution_vars[index - 1]
-    print(res)
     return res
 
 
