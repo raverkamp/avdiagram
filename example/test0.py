@@ -11,7 +11,7 @@ from avdiagram import (
     Arrow,
     Inc12,
     DTextLines,
-    CLine
+    CLine,
 )
 
 
@@ -223,6 +223,7 @@ def cmd_example7(args):
 
     d.show(True)
 
+
 def cmd_example8(args):
     d = Diagram(cm(50), cm(50), True)
 
@@ -235,17 +236,17 @@ def cmd_example8(args):
     p5 = d.point("p5", mm(150), mm(110), True)
     p6 = d.point("p6", mm(150), mm(60), True)
 
-    CLine(d,"A", [p1,p2], (1,0), (-1,0))
-    CLine(d,"A", [p1,p3], (0,1), (0,-1))
+    CLine(d, "A", [p1, p2], (1, 0), (-1, 0))
+    CLine(d, "A", [p1, p3], (0, 1), (0, -1))
 
-    CLine(d,"A", [p1,p4,p6,p5,p3], (1,1), (1,-1))
-    CLine(d,"A", [p1,p4,p3], (1,1), (1,-1))
+    CLine(d, "A", [p1, p4, p6, p5, p3], (1, 1), (1, -1))
+    CLine(d, "A", [p1, p4, p3], (1, 1), (1, -1))
 
-    CLine(d,"A", [p4,p4], (1,-1), (1,1))
-    
+    CLine(d, "A", [p4, p4], (1, -1), (1, 1))
+
     d.show(True)
 
-              
+
 def main():
     parser = argparse.ArgumentParser(
         prog="Examples",
@@ -278,7 +279,6 @@ def main():
     p_ex8 = subparsers.add_parser("ex8")
     p_ex8.set_defaults(func=cmd_example8)
 
-    
     args = parser.parse_args()
     args.func(args)
 

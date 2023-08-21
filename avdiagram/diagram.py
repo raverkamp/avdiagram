@@ -120,6 +120,7 @@ class Base(object):
     def to_svg(self, env) -> Tag:
         raise NotImplementedError()
 
+
 class Point(Base):
     def __init__(self, d: "Diagram", name: str, visible: Optional[bool] = False):
         assert isinstance(d, Diagram)
@@ -157,7 +158,6 @@ class Point(Base):
             )
         else:
             return empty_tag
-
 
 
 def flatten(s: Any) -> List[Base]:
@@ -204,12 +204,18 @@ class Line(Base):
             color="green",
         )
 
-class CLine(Base):
 
-    def __init__(self, d: "Diagram", name: str, points: List[Point], normal1: tuple[float, float],
-                 normal2:tuple[float, float]):
+class CLine(Base):
+    def __init__(
+        self,
+        d: "Diagram",
+        name: str,
+        points: List[Point],
+        normal1: tuple[float, float],
+        normal2: tuple[float, float],
+    ):
         assert isinstance(points, list)
-        assert len(points) >=2
+        assert len(points) >= 2
         super().__init__(d, name)
         self.points = list(points)
         self.normal1 = normal1
@@ -225,7 +231,6 @@ class CLine(Base):
 
     def p2(self):
         return self.points[-1]
-
 
     def bseg(
         self, x1: float, y1: float, mx: float, my: float, x2: float, y2: float, d: float
@@ -243,14 +248,13 @@ class CLine(Base):
         x2 = round(env(p2.x()))
         y2 = round(env(p2.y()))
 
-
         # the control points for the endpoints
-        #xxx
-        (dx,dy) = vnormalize(self.normal1[0], self.normal1[1], self.d)
+        # xxx
+        (dx, dy) = vnormalize(self.normal1[0], self.normal1[1], self.d)
         cx1 = x1 + dx
         cy1 = y1 + dy
 
-        (dx,dy) = vnormalize(self.normal2[0], self.normal2[1], self.d)
+        (dx, dy) = vnormalize(self.normal2[0], self.normal2[1], self.d)
         cx2 = x2 + dx
         cy2 = y2 + dy
 
@@ -269,9 +273,10 @@ class CLine(Base):
                 nx = round(env(liste[i + 1].x()))
                 ny = round(env(liste[i + 1].y()))
             s = s + self.bseg(ox, oy, mx, my, nx, ny, self.d) + " S "
-            
+
         s = s + "{0} {1}, {2} {3}".format(cx2, cy2, x2, y2)
         return path(s, width=2, marker_end="url(#Triangle)")
+
 
 class Arrow(Base):
     def __init__(
@@ -402,6 +407,17 @@ class Thing(Base):
                 p.y(), 1 - (pos - 30) / 10, self.point().y(), self.p2().y()
             )
         return p
+
+    def port_normal(self, pos: float):
+        if pos < 0 or pos > 40:
+            raise Exception("out of bounds: " + str(pos))
+        if pos < 10:
+            return (0, -1)
+        if pos < 20:
+            return (1, 0)
+        if pos < 30:
+            return (0, 1)
+        return (-1, 0)
 
 
 class Rectangle(Thing):
@@ -603,15 +619,29 @@ def posfornumbase(wi: float, he: float, p: float) -> Tuple[float, float]:
         raise Exception("position number to large")
 
 
+def connect(t1: Thing, p1: float, t2: Thing, p2: float, d=100, n=0) -> CLine:
+    start_point = t1.port(p1)
+    end_point = t2.port(p2)
+    normal1 = t1.port_normal(p1)
+    normal2 = t2.port_normal(p2)
+
+    l = [start_point]
+    for i in range(n):
+        l.append(d.point("p-" + str(i)))
+    l.append(end_point)
+    return CLine(t1.diagram, "bla", l, normal1, normal2)
+
+
 # vector length
 
 
 def vlen(x: float, y: float) -> float:
     return math.sqrt(x * x + y * y)
 
-def vnormalize(x: float,y:float,d:float)->tuple[float, float]:
-    le = vlen(x,y)
-    return (x*d/le, y*d/le)
+
+def vnormalize(x: float, y: float, d: float) -> tuple[float, float]:
+    le = vlen(x, y)
+    return (x * d / le, y * d / le)
 
 
 # controlpoint computation
@@ -669,8 +699,6 @@ class Diagram(object):
         self.height = h
         # the border around things
         self.border = mm(10)
-
-        self.clines: List[tuple[Thing, float, Thing, float, List[Point]]] = []
 
         self.default_font = Inc12
 
@@ -953,30 +981,6 @@ class Diagram(object):
         self.add_constraint("a", [(1 - x, v1), (x, v2), (-1, v)], Relation.EQ, 0)
         return v
 
-    # a connection line
-    def cline(
-        self,
-        t1: Thing,
-        p1: float,
-        t2: Thing,
-        p2: float,
-        liste: List[Point] = [],
-    ) -> None:
-        a1 = t1
-        if not isinstance(a1, Thing):
-            raise Exception("wrong type")
-        a2 = t2
-        if not isinstance(a2, Thing):
-            raise Exception("wrong type")
-
-        liste_: List[Point] = []
-        for x in liste:
-            xx = x
-            if not isinstance(xx, Point):
-                raise Exception("not a point")
-            liste_.append(xx)
-        self.clines.append((a1, float(p1), a2, float(p2), liste_))
-
     def posfornum(self, env, obj: Thing, p: float) -> Tuple[float, float]:
         x = env(obj.point().x())
         y = env(obj.point().y())
@@ -996,44 +1000,6 @@ class Diagram(object):
             return (x - d, y)
         else:
             raise Exception("bad value for p")
-
-    def bseg(
-        self, x1: float, y1: float, mx: float, my: float, x2: float, y2: float, d: float
-    ) -> str:
-        (cx, cy) = cpfor(x1, y1, mx, my, x2, y2, d)
-        return "{0} {1} {2} {3}  ".format(cx, cy, mx, my)
-
-    def bpath(
-        self,
-        env,
-        obj1: Thing,
-        p1: float,
-        obj2: Thing,
-        p2: float,
-        liste: List[Point],
-    ) -> Tag:
-        d = 100
-        (x1, y1) = self.posfornum(env, obj1, p1)
-        (x2, y2) = self.posfornum(env, obj2, p2)
-        (cx1, cy1) = self.cp(x1, y1, p1, d)
-        (cx2, cy2) = self.cp(x2, y2, p2, d)
-
-        s = "M {0},{1} C {2},{3} ".format(x1, y1, cx1, cy1)
-        ox = x1
-        oy = x2
-        for i in range(len(liste)):
-            mx = env(liste[i].x())
-            my = env(liste[i].y())
-
-            if i == len(liste) - 1:
-                nx = x2
-                ny = y2
-            else:
-                nx = env(liste[i + 1].x())
-                ny = env(liste[i + 1].y())
-            s = s + self.bseg(ox, oy, mx, my, nx, ny, d) + " S "
-        s = s + "{0},{1} {2},{3}".format(cx2, cy2, x2, y2)
-        return path(s, width=2, marker_end="url(#Triangle)")
 
     def solve_problem(self, verbose=False):
         var_list = []
@@ -1090,9 +1056,6 @@ class Diagram(object):
                 svgtab = obj.to_svg(env)
                 l.append(svgtab)
 
-        for o1, p1, o2, p2, liste in self.clines:
-            paa = self.bpath(env, o1, p1, o2, p2, liste)
-            l.append(paa)
         return l
 
     def show(self, verbose=False) -> None:

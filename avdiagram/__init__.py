@@ -11,5 +11,6 @@ from .diagram import (
     Arrow,
     Inc12,
     DTextLines,
-    CLine
+    CLine,
+    connect,
 )

@@ -1,4 +1,4 @@
-from avdiagram import cm, mm, Diagram, Table, Column
+from avdiagram import cm, mm, Diagram, Table, Column, connect
 
 
 def main():
@@ -41,10 +41,10 @@ def main():
     d.over(customer_group, mm(20), customer)
     d.over(country, mm(20), customer_group)
 
-    d.cline(customer_group, 5, country, 25)
-    d.cline(customer, 5, customer_group, 25)
+    connect(customer_group, 5, country, 25)
+    connect(customer, 5, customer_group, 25)
 
-    d.cline(customer_group, 12, customer_group, 8)
+    connect(customer_group, 12, customer_group, 8)
 
     d.show()
 
