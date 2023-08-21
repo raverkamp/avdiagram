@@ -31,23 +31,6 @@ from . import ortools_solver
 from . import solver
 
 
-def mk_counter() -> Callable[[], str]:
-    a: List[int] = [0]
-
-    def newid() -> str:
-        a[0] = a[0] + 1
-        return str(a[0])
-
-    return newid
-
-
-_newid = mk_counter()
-
-
-def newid(s: Optional[str] = None) -> str:
-    return (s or "") + "-" + _newid()
-
-
 Table = namedtuple("Table", ["name", "columns", "pk"])
 Column = namedtuple("Column", ["name", "type"])
 
@@ -79,7 +62,7 @@ class DVar(object):
         ubound: Optional[float],
         objective: float,
     ):
-        self.id = newid(name)
+        self.id = parent.newid(name)
         self.name = name
         self.parent = parent
         self.lbound = lbound
@@ -685,7 +668,12 @@ class Diagram(object):
         self.default_font = Inc12
 
         self.debug = debug
+        self.counter = 0
         self.zero_var = self.get_var("zero", 0, 0)
+
+    def newid(self, s: Optional[str] = None) -> str:
+        self.counter = self.counter + 1
+        return (s or "") + "-" + str(self.counter)
 
     def add_constraint(
         self, name: str, sums: List[Tuple[float, DVar]], op: Relation, const: float
@@ -977,7 +965,7 @@ class Diagram(object):
                 low = cons.const
             if cons.op in (Relation.LE, Relation.EQ):
                 up = cons.const
-            cons_list.append((newid(cons.name), l, low, up))
+            cons_list.append((self.newid(cons.name), l, low, up))
 
         objective = []
         for v in self.vars:
