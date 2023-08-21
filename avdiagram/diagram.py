@@ -604,21 +604,6 @@ def load_tables(
         return tabs
 
 
-def posfornumbase(wi: float, he: float, p: float) -> Tuple[float, float]:
-    if p < 0:
-        raise Exception("position number to small")
-    elif p < 10:
-        return (p / 10.0 * wi, 0)
-    elif p < 20:
-        return (wi, (p - 10) * he / 10.0)
-    elif p < 30:
-        return ((30 - p) / 10 * wi, he)
-    elif p < 40:
-        return (0, (40 - p) / 10 * he)
-    else:
-        raise Exception("position number to large")
-
-
 def connect(t1: Thing, p1: float, t2: Thing, p2: float, d=100, n=0) -> CLine:
     start_point = t1.port(p1)
     end_point = t2.port(p2)
@@ -980,26 +965,6 @@ class Diagram(object):
             self.samev(v, v2)
         self.add_constraint("a", [(1 - x, v1), (x, v2), (-1, v)], Relation.EQ, 0)
         return v
-
-    def posfornum(self, env, obj: Thing, p: float) -> Tuple[float, float]:
-        x = env(obj.point().x())
-        y = env(obj.point().y())
-        wi = env(obj.width())
-        he = env(obj.height())
-        (ox, oy) = posfornumbase(wi, he, p)
-        return (x + ox, y + oy)
-
-    def cp(self, x: float, y: float, p: float, d: float) -> Tuple[float, float]:
-        if 0 <= p < 10:
-            return (x, y - d)
-        elif p < 20:
-            return (x + d, y)
-        elif p < 30:
-            return (x, y + d)
-        elif p < 40:
-            return (x - d, y)
-        else:
-            raise Exception("bad value for p")
 
     def solve_problem(self, verbose=False):
         var_list = []
