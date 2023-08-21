@@ -105,16 +105,17 @@ class Base(object):
 
 
 class Point(Base):
-    def __init__(self, d: "Diagram", name: str, visible: Optional[bool] = False):
+    def __init__(self, d: "Diagram", visible: Optional[bool] = False, name: str = ""):
         assert isinstance(d, Diagram)
         assert isinstance(name, str)
+        assert visible in (True, False)
         super().__init__(d, name)
 
-        self._xvar = d.get_var(name + "-x", 0, None)
-        self._yvar = d.get_var(name + "-y", 0, None)
+        self._xvar = d.get_var(self.name + "-x", 0, None)
+        self._yvar = d.get_var(self.name + "-y", 0, None)
         self.visible = visible
 
-        d.add_object(name, self)
+        d.add_object(self)
 
     def point(self):
         return self
@@ -160,14 +161,15 @@ def flatten(s: Any) -> List[Base]:
 
 
 class Line(Base):
-    def __init__(self, d: "Diagram", name: str, line_width: float):
+    def __init__(self, d: "Diagram", line_width: float, name: str = ""):
+        assert isinstance(line_width, (float, int))
         super().__init__(d, name)
-        self._p1 = d.point(name + "-p1")
-        self._p2 = d.point(name + "-p2")
+        self._p1 = d.point(name=self.name + "-p1")
+        self._p2 = d.point(name=self.name + "-p2")
         self.line_width = line_width
         self._width = None
         self._height = None
-        d.add_object(name, self)
+        d.add_object(self)
 
     def point(self):
         return self.p1()
@@ -192,10 +194,10 @@ class CLine(Base):
     def __init__(
         self,
         d: "Diagram",
-        name: str,
         points: List[Point],
         normal1: tuple[float, float],
         normal2: tuple[float, float],
+        name: str = "",
     ):
         assert isinstance(points, list)
         assert len(points) >= 2
@@ -204,7 +206,7 @@ class CLine(Base):
         self.normal1 = normal1
         self.normal2 = normal2
         self.d = 50
-        d.add_object(name, self)
+        d.add_object(self)
 
     def point(self):
         return self.p1()
@@ -265,20 +267,20 @@ class Arrow(Base):
     def __init__(
         self,
         d: "Diagram",
-        name: str,
         width: float,
         color: str = "#a0a0a0",
         line_color: str = "#000000",
         line_width: float = 0,
+        name: str = "",
     ):
         super().__init__(d, name)
-        self._p1 = d.point(name + "-p1")
-        self._p2 = d.point(name + "-p2")
+        self._p1 = d.point(name=self.name + "-p1")
+        self._p2 = d.point(name=self.name + "-p2")
         self._width = width
         self._color = color
         self._line_color = line_color
         self._line_width = line_width
-        d.add_object(name, self)
+        d.add_object(self)
 
     def point(self):
         return self.p1()
@@ -335,10 +337,10 @@ class Thing(Base):
 
     def __init__(self, d: "Diagram", name: str):
         super().__init__(d, name)
-        self._p1 = d.point(name + "-p1")
-        self._p2 = d.point(name + "-p2")
-        self._width = d.get_var(name + "-width", 0, None)
-        self._height = d.get_var(name + "-height", 0, None)
+        self._p1 = d.point(name=self.name + "-p1")
+        self._p2 = d.point(name=self.name + "-p2")
+        self._width = d.get_var(self.name + "-width", 0, None)
+        self._height = d.get_var(self.name + "-height", 0, None)
         d.add_constraint(
             name,
             [(1, self._p2.x()), (-1, self._p1.x()), (-1, self._width)],
@@ -370,7 +372,7 @@ class Thing(Base):
     def port(self, pos: float):
         if pos < 0 or pos > 40:
             raise Exception("out of bounds: " + str(pos))
-        p = self.diagram.point("a")
+        p = self.diagram.point(name=self.name + "port-" + str(pos))
         if pos < 10:
             self.diagram.convex_comb(p.x(), pos / 10.0, self.point().x(), self.p2().x())
             self.diagram.samev(p.y(), self.point().y())
@@ -404,13 +406,14 @@ class Thing(Base):
 
 
 class Rectangle(Thing):
-    def __init__(self, d: "Diagram", name: str, line_width: float, color: str):
+    def __init__(self, d: "Diagram", line_width: float, color: str, name: str = ""):
         super().__init__(d, name)
+        assert isinstance(line_width, (float, int))
         self.name = name
         self._line_width = line_width
         self._color = color
 
-        d.add_object(name, self)
+        d.add_object(self)
 
     def to_svg(self, env) -> Tag:
         return rect(
@@ -445,7 +448,7 @@ class DTable(Thing):
         self.diagram.add_constraint("w", [(1, self.width())], Relation.EQ, width)
         self.diagram.add_constraint("h", [(1, self.height())], Relation.EQ, height)
 
-        d.add_object(name, self)
+        d.add_object(self)
 
     def to_svg(self, env) -> Tag:
         w = env(self.width())
@@ -473,7 +476,7 @@ class DTable(Thing):
 
 
 class DText(Thing):
-    def __init__(self, d: "Diagram", name: str, txt: str, sz: float):
+    def __init__(self, d: "Diagram", txt: str, sz: float, name: str = ""):
         super().__init__(d, name)
         self.font = Font("Inconsolata", sz, "")
         self.text = txt
@@ -483,7 +486,7 @@ class DText(Thing):
         self.diagram.add_constraint("w", [(1, self.width())], Relation.EQ, width)
         self.diagram.add_constraint("h", [(1, self.height())], Relation.EQ, sz)
 
-        d.add_object(name, self)
+        d.add_object(self)
 
     def to_svg(self, env) -> Tag:
         return translate(
@@ -495,7 +498,7 @@ class DText(Thing):
 
 class DTextLines(Thing):
     def __init__(
-        self, d: "Diagram", name: str, txt: List[str], font: Font, border: float
+        self, d: "Diagram", txt: List[str], font: Font, border: float, name: str = ""
     ):
         super().__init__(d, name)
 
@@ -514,7 +517,7 @@ class DTextLines(Thing):
         self.diagram.add_constraint("w", [(1, self.width())], Relation.EQ, width)
         self.diagram.add_constraint("h", [(1, self.height())], Relation.EQ, height)
 
-        d.add_object(name, self)
+        d.add_object(self)
 
     def to_svg(self, env):
         x = env(self.point().x())
@@ -597,7 +600,7 @@ def connect(t1: Thing, p1: float, t2: Thing, p2: float, d=100, n=0) -> CLine:
     for i in range(n):
         l.append(d.point("p-" + str(i)))
     l.append(end_point)
-    return CLine(t1.diagram, "bla", l, normal1, normal2)
+    return CLine(t1.diagram, l, normal1, normal2, name=f"connect{t1.name}-{t2.name}")
 
 
 # vector length
@@ -827,13 +830,13 @@ class Diagram(object):
 
     def point(
         self,
-        name: str,
         x: Optional[float] = None,
         y: Optional[float] = None,
         visible: Optional[bool] = False,
+        name: str = "",
     ) -> Point:
         assert isinstance(name, str)
-        point = Point(self, name, visible)
+        point = Point(self, visible, name)
         if not x is None:
             self.add_constraint("FIX", [(1, point.x())], Relation.EQ, x)
         if not y is None:
@@ -843,7 +846,7 @@ class Diagram(object):
     def real_point(
         self, name: str, x: Optional[float] = None, y: Optional[float] = None
     ) -> Point:
-        point = Point(self, name)
+        point = Point(self)
         self.add_constraint("real", [(1, point.x())], Relation.GE, 0)
         self.add_constraint("real", [(1, point.y())], Relation.GE, 0)
 
@@ -921,16 +924,16 @@ class Diagram(object):
         self.varcentered(p1.x(), p2.x(), t.p1().x(), t.p2().x())
         self.varcentered(p1.y(), p2.y(), t.p1().y(), t.p2().y())
 
-    def add_object(self, name, o):
+    def add_object(self, o):
         self.object_list.append(o)
 
-    def text(self, name: str, txt: str, sz: float) -> Thing:
-        return DText(self, name, txt, sz)
+    def text(self, txt: str, sz: float, name: str = "") -> Thing:
+        return DText(self, txt, sz, name)
 
-    def textl(self, name: str, txt: List[str], sz: float) -> Thing:
+    def textl(self, txt: List[str], sz: float, name: str = "") -> Thing:
         font = Font("Inconsolata", sz, "")
         tb = mm(2)
-        t = DTextLines(self, name, list(txt), font, tb)
+        t = DTextLines(self, list(txt), font, tb, name)
         return t
 
     def table(self, tab: Table) -> Thing:

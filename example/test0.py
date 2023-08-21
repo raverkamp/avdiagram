@@ -18,18 +18,18 @@ from avdiagram import (
 def cmd_example1(args) -> None:
     d = Diagram(cm(20), cm(20), True)
 
-    t1 = d.text("t1", "text 1", 12)
-    t2 = d.text("t2", "text 2 laenger", 24)
-    t3 = d.text("t3", "text 3", 12)
+    t1 = d.text("text 1", 12)
+    t2 = d.text("text 2 laenger", 24)
+    t3 = d.text("text 3", 12)
 
     d.over(t1, mm(10), t2)
     d.over(t2, mm(20), t3)
 
     d.lalign([t1, t2, t3])
 
-    t4 = d.text("t4", "text 4", 18)
-    t5 = d.text("t5", "text 5 laenger", 10)
-    t6 = d.text("t6", "text 6", 12)
+    t4 = d.text("text 4", 18)
+    t5 = d.text("text 5 laenger", 10)
+    t6 = d.text("text 6", 12)
 
     d.over(t4, mm(20), t5)
     d.over(t5, mm(10), t6)
@@ -38,14 +38,14 @@ def cmd_example1(args) -> None:
 
     d.left(t1, mm(100), t4)
 
-    p1 = d.point("p1_40_30", mm(40), mm(30), True)
-    p2 = d.point("p1_50_20_off", None, None, True)
+    p1 = d.point(mm(40), mm(30), True, name="p1_40_30")
+    p2 = d.point(None, None, True, name="p1_50_20_off")
     d.over(p1, mm(50), p2)
     d.left(p1, mm(20), p2)
 
-    r = Rectangle(d, "A", 1, "green")
+    r = Rectangle(d, 1, "green")
 
-    tl = d.textl("tl", ["A", "B", "C", "D"], 18)
+    tl = d.textl(["A", "B", "C", "D"], 18)
 
     d.same(r.point(), tl.point())
     d.samev(r.width(), tl.width())
@@ -58,9 +58,9 @@ def cmd_example1(args) -> None:
 
 def cmd_example2(args):
     d = Diagram(cm(20), cm(20), True)
-    r = Rectangle(d, "A", mm(2), "#80ff80")
+    r = Rectangle(d, mm(2), "#80ff80")
 
-    tl = d.textl("tl", ["A", "B", "C", "D"], 18)
+    tl = d.textl(["A", "B", "C", "D"], 18)
 
     d.same(r.point(), tl.point())
     d.samev(r.width(), tl.width())
@@ -78,8 +78,8 @@ def mk_box(
     bgcolor="#ffffff",
     border_color="#000000",
 ):
-    r = Rectangle(d, "A", line_width=border_width, color=bgcolor)
-    tl = d.textl("tl", txt.split("\n"), size)
+    r = Rectangle(d, line_width=border_width, color=bgcolor)
+    tl = d.textl(txt.split("\n"), size)
     if borders is None:
         (leftb, rightb, upb, lowb) = (size, size, size, size)
     elif isinstance(borders, (float, int)):
@@ -100,13 +100,13 @@ def cmd_example3(args):
     d = Diagram(cm(20), cm(20), True)
 
     r = mk_box(d, "a\nbbb\ncccccc", 12, borders=mm(20))
-    p = d.point("AAA", mm(20), mm(40))
+    p = d.point(mm(20), mm(40))
     d.same(r.point(), p)
 
     r = mk_box(
         d, "a\nbbb\ncccccc", 24, borders=mm(10), bgcolor="#aaaaaa", border_width=mm(2)
     )
-    p = d.point("AAA", mm(100), mm(40))
+    p = d.point(mm(100), mm(40))
     d.same(r.point(), p)
     d.show()
 
@@ -114,11 +114,11 @@ def cmd_example3(args):
 def cmd_example4(args):
     d = Diagram(cm(20), cm(20), True)
 
-    r1 = Rectangle(d, "R1", line_width=1, color="#ff0000")
-    r2 = Rectangle(d, "R2", line_width=1, color="#ff00ff")
-    r3 = Rectangle(d, "R3", line_width=1, color="#ffff00")
+    r1 = Rectangle(d, line_width=1, color="#ff0000")
+    r2 = Rectangle(d, line_width=1, color="#ff00ff")
+    r3 = Rectangle(d, line_width=1, color="#ffff00")
 
-    p = d.point("AAA", mm(10), mm(10))
+    p = d.point(mm(10), mm(10))
 
     d.same(r1.point(), p)
     d.samev(r1.width(), r2.width())
@@ -136,11 +136,11 @@ def cmd_example4(args):
 
     d.samev(r1.point().y(), r3.point().y())
 
-    l = Line(d, "A", 1)
+    l = Line(d, 1)
     d.same(r1.port(12), l.p1())
     d.same(r3.port(32), l.p2())
 
-    l = Line(d, "A", 1)
+    l = Line(d, 1)
     d.same(r1.port(27), l.p1())
     d.same(r2.port(2), l.p2())
 
@@ -150,13 +150,13 @@ def cmd_example4(args):
 def cmd_example5(args):
     d = Diagram(cm(20), cm(20), True)
 
-    p1 = d.point("A", mm(20), mm(20))
-    p2 = d.point("B", mm(90), mm(90))
-    p3 = d.point("C", mm(10), mm(90))
+    p1 = d.point(mm(20), mm(20))
+    p2 = d.point(mm(90), mm(90))
+    p3 = d.point(mm(10), mm(90))
 
-    a1 = Arrow(d, "A1", mm(10))
+    a1 = Arrow(d, mm(10))
 
-    a2 = Arrow(d, "A2", mm(5), color="#ffa0a0", line_width=1, line_color="red")
+    a2 = Arrow(d, mm(5), color="#ffa0a0", line_width=1, line_color="red")
 
     d.same(p1, a1.p1())
     d.same(p2, a1.p2())
@@ -168,12 +168,12 @@ def cmd_example5(args):
 def cmd_example6(args):
     d = Diagram(cm(20), cm(20), True)
 
-    r = Rectangle(d, "R", line_width=2, color="none")
+    r = Rectangle(d, line_width=2, color="none")
 
-    r1 = Rectangle(d, "R1", line_width=1, color="#ff0000")
-    r2 = Rectangle(d, "R2", line_width=1, color="#ff0000")
+    r1 = Rectangle(d, line_width=1, color="#ff0000")
+    r2 = Rectangle(d, line_width=1, color="#ff0000")
 
-    p = d.point("AAA", mm(20), mm(30))
+    p = d.point(mm(20), mm(30))
 
     d.same(r1.point(), p)
 
@@ -194,11 +194,11 @@ def cmd_example6(args):
 def cmd_example7(args):
     d = Diagram(cm(50), cm(50), True)
 
-    r = Rectangle(d, "R", line_width=2, color="#00ff00")
+    r = Rectangle(d, line_width=2, color="#00ff00")
 
-    r1 = Rectangle(d, "R1", line_width=1, color="#ff0000")
+    r1 = Rectangle(d, line_width=1, color="#ff0000")
 
-    p = d.point("AAA", mm(20), mm(30))
+    p = d.point(mm(20), mm(30))
 
     d.same(r.point(), p)
 
@@ -212,9 +212,9 @@ def cmd_example7(args):
 
     d.centered(r.p1(), r.p2(), r1)
 
-    r2 = Rectangle(d, "R", color="#aaffaa", line_width=2)
+    r2 = Rectangle(d, color="#aaffaa", line_width=2)
 
-    t = DTextLines(d, "bla", ["Hans Dampf", "in allen Gassen"], Inc12, 1)
+    t = DTextLines(d, ["Hans Dampf", "in allen Gassen"], Inc12, 1)
 
     d.centered(r2.p1(), r2.p2(), t)
     d.diffv(r2.width(), t.width(), mm(40))
@@ -227,22 +227,22 @@ def cmd_example7(args):
 def cmd_example8(args):
     d = Diagram(cm(50), cm(50), True)
 
-    p1 = d.point("p1", mm(20), mm(30), True)
-    p2 = d.point("p2", mm(200), mm(30), True)
-    p3 = d.point("p3", mm(20), mm(200), True)
+    p1 = d.point(mm(20), mm(30), True)
+    p2 = d.point(mm(200), mm(30), True)
+    p3 = d.point(mm(20), mm(200), True)
 
-    p4 = d.point("p4", mm(100), mm(100), True)
+    p4 = d.point(mm(100), mm(100), True)
 
-    p5 = d.point("p5", mm(150), mm(110), True)
-    p6 = d.point("p6", mm(150), mm(60), True)
+    p5 = d.point(mm(150), mm(110), True)
+    p6 = d.point(mm(150), mm(60), True)
 
-    CLine(d, "A", [p1, p2], (1, 0), (-1, 0))
-    CLine(d, "A", [p1, p3], (0, 1), (0, -1))
+    CLine(d, [p1, p2], (1, 0), (-1, 0))
+    CLine(d, [p1, p3], (0, 1), (0, -1))
 
-    CLine(d, "A", [p1, p4, p6, p5, p3], (1, 1), (1, -1))
-    CLine(d, "A", [p1, p4, p3], (1, 1), (1, -1))
+    CLine(d, [p1, p4, p6, p5, p3], (1, 1), (1, -1))
+    CLine(d, [p1, p4, p3], (1, 1), (1, -1))
 
-    CLine(d, "A", [p4, p4], (1, -1), (1, 1))
+    CLine(d, [p4, p4], (1, -1), (1, 1))
 
     d.show(True)
 
