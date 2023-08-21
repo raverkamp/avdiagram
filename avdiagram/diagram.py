@@ -674,9 +674,6 @@ class Diagram(object):
         # these are our constaints
         self.constraints: List[Constraint] = []
 
-        # the constraint engine
-        self.cons = None
-
         # the variables
         self.vars: List[DVar] = []
 
@@ -687,7 +684,6 @@ class Diagram(object):
 
         self.default_font = Inc12
 
-        self.counter = 0
         self.debug = debug
         self.zero_var = self.get_var("zero", 0, 0)
 
