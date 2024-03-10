@@ -747,7 +747,7 @@ class Diagram(object):
         term2 = as_term(t2)
         term = sub(term1,term2)
         sums = term.summands
-        const = term.const
+        const = -term.const
         var_ids = set()
         for _, var in sums:
             if var.id in var_ids:
