@@ -3,11 +3,12 @@ from collections.abc import Sequence
 from collections import namedtuple
 from enum import Enum
 import math
+from numbers import Number
 import tempfile
 from typing import List, Optional, Union, Any, Tuple, Callable, cast
 import webbrowser
 
-USE_GLPK = True
+USE_GLPK = False #True
 
 
 from .svg import (
@@ -74,6 +75,66 @@ class DVar(object):
         self.parent.vars.append(self)
 
 
+def simplify_summands(summands: List[Tuple[float, DVar]])->List[Tuple[float, DVar]]:
+    d = {}
+    for (fac,var) in summands:
+        if fac ==0:
+            continue
+        if not var in d:
+            d[var] = fac
+        else:
+            d[var] = d[var] + fac
+    res:List[Tuple[float, DVar]] = []
+    for var in d:
+        res.append((d[var], var))
+    return res
+
+class Term():
+    def __init__(self, summands: List[Tuple[float, DVar]], const)->None:
+        assert isinstance(const, (int,float))
+        self.summands =  summands
+        self.const = const
+
+def as_term(x)->Term:
+    if isinstance(x, Term):
+        return x
+    if isinstance(x, (int, float)):
+        return Term([],x)
+    if isinstance(x, DVar):
+        return Term([(1,x)],0)
+    if isinstance(x, Sequence):
+        l:List[Tuple[float, DVar]]= []
+        for (c,v) in x:
+            assert isinstance(c, (int, float)), "factor must be float"
+            assert isinstance(v, DVar), "var must be DVar"
+            l.append((c,v))
+        return Term(simplify_summands(l),0)
+    raise Exception("häh?")
+
+def addl(terms)->Term:
+    const = 0
+    l = []
+    for t in terms:
+        term = as_term(t)
+        const = const + t.const
+        l.extend(t.summands)
+    l2 = simplify_summands(l)
+    return Term(l2, const)
+    
+def add(*terms)->Term:
+    return addl(terms)
+
+def sub(t1, t2)->Term:
+    return add(t1, mul(-1,t2))
+
+
+def mul(const, term):
+    t = as_term(term)
+    assert isinstance(const, Number)
+    l = [(c*const,v) for (c,v) in term.summands]
+    return Term(l, t.const * const)
+
+
 class Relation(Enum):
     EQ = 1
     LE = 2
@@ -94,6 +155,7 @@ class Base(object):
     """everything with at least one coordinate"""
 
     def __init__(self, d: "Diagram", name: str) -> None:
+        assert isinstance(name, str)
         self.name = name
         self.diagram = d
 
@@ -679,8 +741,13 @@ class Diagram(object):
         return (s or "") + "-" + str(self.counter)
 
     def add_constraint(
-        self, name: str, sums: List[Tuple[float, DVar]], op: Relation, const: float
+        self, name: str, t1:Any, op: Relation, t2:Any
     ) -> None:
+        term1 = as_term(t1)
+        term2 = as_term(t2)
+        term = sub(term1,term2)
+        sums = term.summands
+        const = term.const
         var_ids = set()
         for _, var in sums:
             if var.id in var_ids:
@@ -928,6 +995,7 @@ class Diagram(object):
         self.object_list.append(o)
 
     def text(self, txt: str, sz: float, name: str = "") -> Thing:
+        assert isinstance(name, str)
         return DText(self, txt, sz, name)
 
     def textl(self, txt: List[str], sz: float, name: str = "") -> Thing:
@@ -984,6 +1052,7 @@ class Diagram(object):
         return sol
 
     def create_svg(self, values: dict[str, float]) -> list[Stuff]:
+        assert isinstance(values, dict)
         l: list[Stuff] = []
         # the border
         r0 = polyline(
