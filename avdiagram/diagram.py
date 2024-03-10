@@ -78,6 +78,8 @@ class DVar(object):
 def simplify_summands(summands: List[Tuple[float, DVar]])->List[Tuple[float, DVar]]:
     d = {}
     for (fac,var) in summands:
+        assert isinstance(fac, (int,float))
+        assert isinstance(var, DVar)
         if fac ==0:
             continue
         if not var in d:
@@ -116,8 +118,8 @@ def addl(terms)->Term:
     l = []
     for t in terms:
         term = as_term(t)
-        const = const + t.const
-        l.extend(t.summands)
+        const = const + term.const
+        l.extend(term.summands)
     l2 = simplify_summands(l)
     return Term(l2, const)
     
@@ -757,14 +759,14 @@ class Diagram(object):
         self.constraints.append(c)
 
     def same(self, p1: Point, p2: Point):
-        self.add_constraint("SAME", [(1, p1.x()), (-1, p2.x())], Relation.EQ, 0)
-        self.add_constraint("SAME", [(1, p1.y()), (-1, p2.y())], Relation.EQ, 0)
+        self.add_constraint("SAME", p1.x(), Relation.EQ, p2.x())
+        self.add_constraint("SAME", p1.y(), Relation.EQ, p2.y())
 
     def samev(self, v1: DVar, v2: DVar):
-        self.add_constraint("SAMEV", [(1, v1), (-1, v2)], Relation.EQ, 0)
+        self.add_constraint("SAMEV", v1, Relation.EQ, v2)
 
     def diffv(self, v1: DVar, v2: DVar, diff: float):
-        self.add_constraint("DIFFV", [(1, v1), (-1, v2)], Relation.EQ, diff)
+        self.add_constraint("DIFFV", v1, Relation.EQ, add(v2,diff))
 
     def left(self, t1: Any, c: float, t2: Any) -> None:
         l1 = flatten(t1)
