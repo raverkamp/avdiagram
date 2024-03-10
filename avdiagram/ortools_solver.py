@@ -82,7 +82,7 @@ def solve_problem(variables, constraints, objective, min_or_max, verbose=False):
             print("A potentially suboptimal solution was found.")
         else:
             print("The solver could not solve the problem.")
-            exit(1)
+            raise Exception("no solution found")
     res = {}
     for vname in var_dict:
         res[vname] = var_dict[vname].solution_value()
