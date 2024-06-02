@@ -13,4 +13,5 @@ from .diagram import (
     DTextLines,
     CLine,
     connect,
+    add, mul, Relation
 )

@@ -177,8 +177,8 @@ def cmd_example6(args):
 
     d.same(r1.point(), p)
 
-    d.add_constraint("C1", [(1, r1.width())], Relation.EQ, mm(20))
-    d.add_constraint("C2", [(1, r1.height())], Relation.EQ, mm(40))
+    d.add_constraint("C1", r1.width(), Relation.EQ, mm(20))
+    d.add_constraint("C2", r1.height(), Relation.EQ, mm(40))
 
     d.samev(r1.width(), r2.height())
     d.samev(r1.height(), r2.width())
