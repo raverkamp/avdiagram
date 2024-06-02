@@ -2,7 +2,7 @@
 
 from collections import namedtuple
 from typing import List, Optional, Union, Any, Tuple, Callable, NamedTuple
-
+import xml.sax.saxutils as saxutils
 
 def merge_dicts(d1: dict[str, Any], d2: dict[str, Any]) -> dict[str, Any]:
     res = {}
@@ -140,14 +140,14 @@ def polyline(pts: list[Tuple[float, float]], style: Optional[str] = None) -> Tag
 
 
 def renderattr(l: list[str], a: str) -> None:
-    l.append('"' + a + '" ')
+    l.append(saxutils.quoteattr(a))
 
 
 def rendertag(l: list[str], tag: Tag) -> None:
-    l.append("<" + tag.name + " ")
+    l.append("<" + tag.name)
     for k in tag.ats.keys():
         v = tag.ats[k]
-        l.append(k)
+        l.append(" " +k)
         l.append("=")
         renderattr(l, v)
     if tag.content is None:
@@ -160,7 +160,7 @@ def rendertag(l: list[str], tag: Tag) -> None:
 
 def render(l: list[str], x: Stuff) -> None:
     if isinstance(x, str):
-        l.append(x)
+        l.append(saxutils.escape(x))
     elif isinstance(x, Raw):
         l.append(x.text)
     elif isinstance(x, list):
