@@ -266,6 +266,7 @@ class CLine(Base):
         points: List[Point],
         normal1: tuple[float, float],
         normal2: tuple[float, float],
+        connector2: str,
         name: str = "",
     ):
         assert isinstance(points, list)
@@ -274,6 +275,7 @@ class CLine(Base):
         self.points = list(points)
         self.normal1 = normal1
         self.normal2 = normal2
+        self.connector2 = connector2
         self.d = 50
         d.add_object(self)
 
@@ -329,7 +331,13 @@ class CLine(Base):
             s = s + self.bseg(ox, oy, mx, my, nx, ny, self.d) + " S "
 
         s = s + "{0} {1}, {2} {3}".format(cx2, cy2, x2, y2)
-        return path(s, width=2, marker_end="url(#Triangle)")
+        if self.connector2 == ">":
+            marker_end = "url(#Triangle)"
+        elif self.connector2 == "":
+            marker_end = ""
+        else:
+            raise Exception(f"unkown end marker: {self.connector2}")
+        return path(s, width=2, marker_end=marker_end)
 
 
 class Arrow(Base):
@@ -659,7 +667,9 @@ def load_tables(
         return tabs
 
 
-def connect(t1: Thing, p1: float, t2: Thing, p2: float, d=100, n=0) -> CLine:
+def connect(
+    t1: Thing, p1: float, t2: Thing, p2: float, d=100, n=0, connector2=">"
+) -> CLine:
     start_point = t1.port(p1)
     end_point = t2.port(p2)
     normal1 = t1.port_normal(p1)
@@ -669,7 +679,14 @@ def connect(t1: Thing, p1: float, t2: Thing, p2: float, d=100, n=0) -> CLine:
     for i in range(n):
         l.append(d.point("p-" + str(i)))
     l.append(end_point)
-    return CLine(t1.diagram, l, normal1, normal2, name=f"connect{t1.name}-{t2.name}")
+    return CLine(
+        t1.diagram,
+        l,
+        normal1,
+        normal2,
+        connector2=connector2,
+        name=f"connect{t1.name}-{t2.name}",
+    )
 
 
 # vector length

@@ -14,9 +14,9 @@ from avdiagram import (
     DTextLines,
     CLine,
     connect,
-    add, mul
+    add,
+    mul,
 )
-
 
 
 def cmd_example1(args) -> None:
@@ -24,7 +24,7 @@ def cmd_example1(args) -> None:
 
     def create_tree(t):
         (lab, children) = t
-        #returns a tree of all componenets
+        # returns a tree of all componenets
         label = d.text(lab, 12)
         last_t = None
         first_head = None
@@ -32,32 +32,45 @@ def cmd_example1(args) -> None:
         all = [label]
         for child in children:
             (head, compos) = create_tree(child)
-            connect(label,25, head, 5)
+            connect(label, 25, head, 5)
             if not first_head:
                 first_head = head
             last_head = head
-            d.over(label, mm(20),compos)
+            d.over(label, mm(20), compos)
             if last_t:
-                d.left(last_t,mm(10),compos)
+                d.left(last_t, mm(10), compos)
             last_t = compos
             all.append(compos)
         if not first_head is None:
-            d.add_constraint("mittig", add(first_head.p1().x(), last_head.p2().x()),Relation.EQ,
-                             add(label.p1().x(), label.p2().x()))
+            d.add_constraint(
+                "mittig",
+                add(first_head.p1().x(), last_head.p2().x()),
+                Relation.EQ,
+                add(label.p1().x(), label.p2().x()),
+            )
         return (label, all)
 
     # a tree is a 2-tuple with a label and list of children which are also trees.
-    create_tree(("AAAAAAA",[("BBBB",[("EEEEEEE",[]), ("GGGG",[("HHHHH",[])])]),("CCCC",[("DDDD",[("GGGGGGGGG",[])])])]))
-    
+    create_tree(
+        (
+            "AAAAAAA",
+            [
+                ("BBBB", [("EEEEEEE", []), ("GGGG", [("HHHHH", [])])]),
+                ("CCCC", [("DDDD", [("GGGGGGGGG", [])])]),
+            ],
+        )
+    )
+
     d.show(False)
 
-    
+
 def cmd_dir_tree(args) -> None:
     p = pathlib.Path(args.dir).resolve()
-    
+
     d = Diagram(cm(500), cm(500), True)
 
-    # returns head, around points
+    # returns head label, around points
+    # p is a path
     def build_tree(p):
         label = d.text(p.name, 12)
         if p.is_dir():
@@ -66,30 +79,35 @@ def cmd_dir_tree(args) -> None:
                 l.append(build_tree(child))
         else:
             l = []
-        if not l:
+        if not l:  # no children
             p1 = label.p1()
             p2 = label.p2()
             return (label, p1, p2)
         p1 = d.point()
         p2 = d.point()
-        a = list([label] + [px for (_,px,_) in l] + [py for (_,_,py) in l])
+        a = list([label] + [px for (_, px, _) in l] + [py for (_, _, py) in l])
 
         d.around(p1, p2, a, 0)
-       
-        d.add_constraint("mittig", add(label.p1().x(), label.p2().x()), Relation.EQ,
-                         add(p1.x(), p2.x()))
 
-        for (lab,_,_) in l:
-            connect(label,25, lab, 5)
-        for ((alab,ap1,ap2),(blab,bp1,bp2)) in zip(l,l[1:]):
-            d.left(ap2,mm(3), bp1)
-            d.add_constraint("eq",ap1.y(), Relation.EQ, bp1.y())
-        d.over(label,mm(20), l[0][1])
+        d.add_constraint(
+            "mittig",
+            add(label.p1().x(), label.p2().x()),
+            Relation.EQ,
+            add(p1.x(), p2.x()),
+        )
+
+        for lab, _, _ in l:
+            connect(label, 25, lab, 5, connector2="")
+        for (alab, ap1, ap2), (blab, bp1, bp2) in zip(l, l[1:]):
+            d.left(ap2, mm(3), bp1)
+            d.add_constraint("eq", ap1.y(), Relation.EQ, bp1.y())
+        d.over(label, mm(20), l[0][1])
         return (label, p1, p2)
 
     build_tree(p)
     d.show(True)
-    
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="Examples",
@@ -107,7 +125,6 @@ def main():
 
     args = parser.parse_args()
     args.func(args)
-
 
 
 main()
