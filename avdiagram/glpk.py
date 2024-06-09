@@ -81,13 +81,13 @@ def generate_problem(variables, constraints, objective, min_or_max, verbose):
         else:
             raise Exception("BUG")
 
-    for (coeff, v) in objective:
+    for coeff, v in objective:
         id = var_dict[v]
         out.write("a 0 {0} {1}\n".format(id, coeff))
     j = 1
     for cons in constraints:
         (name, coefficients, lbound, ubound) = cons
-        for (coeff, v) in coefficients:
+        for coeff, v in coefficients:
             id = var_dict[v]
             out.write("a {0} {1} {2}\n".format(j, id, coeff))
         j = j + 1

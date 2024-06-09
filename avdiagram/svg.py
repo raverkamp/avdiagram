@@ -4,6 +4,7 @@ from collections import namedtuple
 from typing import List, Optional, Union, Any, Tuple, Callable, NamedTuple
 import xml.sax.saxutils as saxutils
 
+
 def merge_dicts(d1: dict[str, Any], d2: dict[str, Any]) -> dict[str, Any]:
     res = {}
     d1 = d1 or {}
@@ -147,7 +148,7 @@ def rendertag(l: list[str], tag: Tag) -> None:
     l.append("<" + tag.name)
     for k in tag.ats.keys():
         v = tag.ats[k]
-        l.append(" " +k)
+        l.append(" " + k)
         l.append("=")
         renderattr(l, v)
     if tag.content is None:

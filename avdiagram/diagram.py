@@ -8,7 +8,7 @@ import tempfile
 from typing import List, Optional, Union, Any, Tuple, Callable, cast
 import webbrowser
 
-USE_GLPK = False #True
+USE_GLPK = False  # True
 
 
 from .svg import (
@@ -75,45 +75,48 @@ class DVar(object):
         self.parent.vars.append(self)
 
 
-def simplify_summands(summands: List[Tuple[float, DVar]])->List[Tuple[float, DVar]]:
+def simplify_summands(summands: List[Tuple[float, DVar]]) -> List[Tuple[float, DVar]]:
     d = {}
-    for (fac,var) in summands:
-        assert isinstance(fac, (int,float))
+    for fac, var in summands:
+        assert isinstance(fac, (int, float))
         assert isinstance(var, DVar)
-        if fac ==0:
+        if fac == 0:
             continue
         if not var in d:
             d[var] = fac
         else:
             d[var] = d[var] + fac
-    res:List[Tuple[float, DVar]] = []
+    res: List[Tuple[float, DVar]] = []
     for var in d:
         res.append((d[var], var))
     return res
 
-class Term():
-    def __init__(self, summands: List[Tuple[float, DVar]], const)->None:
-        assert isinstance(const, (int,float))
-        self.summands =  summands
+
+class Term:
+    def __init__(self, summands: List[Tuple[float, DVar]], const) -> None:
+        assert isinstance(const, (int, float))
+        self.summands = summands
         self.const = const
 
-def as_term(x)->Term:
+
+def as_term(x) -> Term:
     if isinstance(x, Term):
         return x
     if isinstance(x, (int, float)):
-        return Term([],x)
+        return Term([], x)
     if isinstance(x, DVar):
-        return Term([(1,x)],0)
+        return Term([(1, x)], 0)
     if isinstance(x, Sequence):
-        l:List[Tuple[float, DVar]]= []
-        for (c,v) in x:
+        l: List[Tuple[float, DVar]] = []
+        for c, v in x:
             assert isinstance(c, (int, float)), "factor must be float"
             assert isinstance(v, DVar), "var must be DVar"
-            l.append((c,v))
-        return Term(simplify_summands(l),0)
+            l.append((c, v))
+        return Term(simplify_summands(l), 0)
     raise Exception("häh?")
 
-def addl(terms)->Term:
+
+def addl(terms) -> Term:
     const = 0
     l = []
     for t in terms:
@@ -122,18 +125,20 @@ def addl(terms)->Term:
         l.extend(term.summands)
     l2 = simplify_summands(l)
     return Term(l2, const)
-    
-def add(*terms)->Term:
+
+
+def add(*terms) -> Term:
     return addl(terms)
 
-def sub(t1, t2)->Term:
-    return add(t1, mul(-1,t2))
+
+def sub(t1, t2) -> Term:
+    return add(t1, mul(-1, t2))
 
 
 def mul(const, term):
     t = as_term(term)
     assert isinstance(const, Number)
-    l = [(c*const,v) for (c,v) in term.summands]
+    l = [(c * const, v) for (c, v) in term.summands]
     return Term(l, t.const * const)
 
 
@@ -742,12 +747,10 @@ class Diagram(object):
         self.counter = self.counter + 1
         return (s or "") + "-" + str(self.counter)
 
-    def add_constraint(
-        self, name: str, t1:Any, op: Relation, t2:Any
-    ) -> None:
+    def add_constraint(self, name: str, t1: Any, op: Relation, t2: Any) -> None:
         term1 = as_term(t1)
         term2 = as_term(t2)
-        term = sub(term1,term2)
+        term = sub(term1, term2)
         sums = term.summands
         const = -term.const
         var_ids = set()
@@ -766,7 +769,7 @@ class Diagram(object):
         self.add_constraint("SAMEV", v1, Relation.EQ, v2)
 
     def diffv(self, v1: DVar, v2: DVar, diff: float):
-        self.add_constraint("DIFFV", v1, Relation.EQ, add(v2,diff))
+        self.add_constraint("DIFFV", v1, Relation.EQ, add(v2, diff))
 
     def left(self, t1: Any, c: float, t2: Any) -> None:
         l1 = flatten(t1)
