@@ -90,6 +90,30 @@ def rect(
     )
 
 
+def ellipse(
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    color: str,
+    line_color: str = "#000000",
+    line_width: float = 1,
+) -> Tag:
+    return Tag(
+        "ellipse",
+        {
+            "fill": color,
+            "stroke": line_color,
+            "stroke-width": str(line_width),
+            "cx": str(x + w / 2),
+            "cy": str(y + h / 2),
+            "rx": str(w / 2),
+            "ry": str(h / 2),
+        },
+        None,
+    )
+
+
 def text(x: float, y: float, txt: str, font: Optional[Font] = None) -> Tag:
     attrs = {"x": str(x), "y": str(y)}
     if font:

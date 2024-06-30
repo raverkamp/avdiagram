@@ -24,6 +24,7 @@ from .svg import (
     rect,
     points,
     empty_tag,
+    ellipse,
 )
 
 from . import glpk
@@ -113,7 +114,7 @@ def as_term(x) -> Term:
             assert isinstance(v, DVar), "var must be DVar"
             l.append((c, v))
         return Term(simplify_summands(l), 0)
-    raise Exception("häh?")
+    raise Exception("can not convert to term: " + repr(x))
 
 
 def addl(terms) -> Term:
@@ -131,15 +132,15 @@ def add(*terms) -> Term:
     return addl(terms)
 
 
-def sub(t1, t2) -> Term:
-    return add(t1, mul(-1, t2))
-
-
 def mul(const, term):
     t = as_term(term)
     assert isinstance(const, Number)
-    l = [(c * const, v) for (c, v) in term.summands]
+    l = [(c * const, v) for (c, v) in t.summands]
     return Term(l, t.const * const)
+
+
+def sub(t1, t2) -> Term:
+    return add(t1, mul(-1, t2))
 
 
 class Relation(Enum):
@@ -503,6 +504,56 @@ class Rectangle(Thing):
         )
 
 
+class Ellipse(Thing):
+    def __init__(self, d: "Diagram", line_width: float, color: str, name: str = ""):
+        super().__init__(d, name)
+        assert isinstance(line_width, (float, int))
+        self.name = name
+        self._line_width = line_width
+        self._color = color
+
+        d.add_object(self)
+
+    def port(self, degree):
+        p = Point(self.diagram)
+        rad = -(degree - 90) / 360 * math.pi * 2
+        self.diagram.add_constraint(
+            "x",
+            p.x(),
+            Relation.EQ,
+            add(
+                mul(math.cos(rad) * 0.5, self.width()),
+                mul(0.5, add(self.p1().x(), self.p2().x())),
+            ),
+        )
+        self.diagram.add_constraint(
+            "y",
+            p.y(),
+            Relation.EQ,
+            add(
+                mul(-math.sin(rad) * 0.5, self.height()),
+                mul(0.5, add(self.p1().y(), self.p2().y())),
+            ),
+        )
+        return p
+
+    def port_normal(self, degree):
+        rad = -(degree - 90) / 360 * math.pi * 2
+        nx = math.cos(rad)  # /env(self.p1().width())
+        ny = -math.sin(rad)  # /env(self.p1().height())
+        return (nx, ny)
+
+    def to_svg(self, env) -> Tag:
+        return ellipse(
+            env(self.p1().x()),
+            env(self.p1().y()),
+            env(self.p2().x()) - env(self.p1().x()),
+            env(self.p2().y()) - env(self.p1().y()),
+            color=self._color,
+            line_width=self._line_width,
+        )
+
+
 #  diagram table
 class DTable(Thing):
     def __init__(self, d: "Diagram", name: str, table: Table, font: Font) -> None:
@@ -847,21 +898,20 @@ class Diagram(object):
                 raise Exception("unknown")
             self.add_constraint("left2", sum2, Relation.GE, 0)
 
-    def lcol(self, dist: float, objs: list[Base]) -> None:
+    def column(self, dist: float, objs: list[Base], align: float = 0) -> None:
         l = flatten(objs)
         if len(l) == 0:
             return
-        self.lalign(l)
+        self.some_align(l, align)
 
         obj0 = l[0]
 
         for kobj in l[1:]:
             obj = kobj
-            lu = [(-1.0, obj0.point().y())]
+            x = add(dist, obj0.point().y())
             if isinstance(obj0, Thing):
-                lu.append((-1.0, obj0.height))
-            lu.append((1, obj.point().y()))
-            self.add_constraint("y dist", lu, Relation.EQ, dist)
+                x = add(x, obj0.height())
+            self.add_constraint("y dist", x, Relation.EQ, obj.point().y())
             obj0 = obj
 
     def lalign(self, l: List[Base]) -> None:
@@ -946,21 +996,15 @@ class Diagram(object):
         return point
 
     def bound(self, var: DVar, l: List[DVar], up: bool, dist: float):
-        rel = Relation.LE if up else Relation.GE
-        x = "up" if up else "lower"
-        coeff: List[Tuple[float, DVar]] = []
-        for v in l:
-            self.add_constraint(
-                "bounding-" + x, [(1, v), (-1, var)], rel, -dist if up else dist
-            )
-            coeff.append((1, v))
+        clamper = self.get_var("clamper", 0, None, 1)
         if up:
-            v2 = self.get_var("boundvar-" + x, None, None, -1000)
+            for v in l:
+                self.add_constraint("bounding-up", var, Relation.GE, add(v, dist))
+                self.add_constraint("clamp", clamper, Relation.GE, add(var, mul(-1, v)))
         else:
-            v2 = self.get_var("boundvar-" + x, None, None, 1000)
-        coeff.append((-len(l), var))
-        coeff.append((-1, v2))
-        self.add_constraint("def-boundvar-" + x, coeff, Relation.EQ, 0)
+            for v in l:
+                self.add_constraint("bounding-down", var, Relation.LE, add(v, -dist))
+                self.add_constraint("clamp", clamper, Relation.GE, add(v, mul(-1, var)))
 
     def topb(self, var: DVar, objs, dist: float):
         l = []
