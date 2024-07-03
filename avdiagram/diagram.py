@@ -417,20 +417,10 @@ class Thing(Base):
         super().__init__(d, name)
         self._p1 = d.point(name=self.name + "-p1")
         self._p2 = d.point(name=self.name + "-p2")
-        self._width = d.get_var(self.name + "-width", 0, None)
-        self._height = d.get_var(self.name + "-height", 0, None)
-        d.add_constraint(
-            name,
-            [(1, self._p2.x()), (-1, self._p1.x()), (-1, self._width)],
-            Relation.EQ,
-            0,
-        )
-        d.add_constraint(
-            name,
-            [(1, self._p2.y()), (-1, self._p1.y()), (-1, self._height)],
-            Relation.EQ,
-            0,
-        )
+        self._width = d.def_var(sub(self._p2.x(),self._p1.x()))
+        self._height = d.def_var(sub(self._p2.y(),self._p1.y()))
+        d.add_constraint(name,self._width, Relation.GE,0)
+        d.add_constraint(name,self._height, Relation.GE,0)
 
     def point(self):
         return self._p1
@@ -446,6 +436,19 @@ class Thing(Base):
 
     def height(self):
         return self._height
+
+    def left(self):
+        return self._p1.x()
+
+    def right(self):
+        return self._p2.x()
+
+    def top(self):
+        return self._p1.y()
+
+    def bottom(self):
+        return self._p2.y()
+    
 
     def port(self, pos: float):
         if pos < 0 or pos > 40:
@@ -966,6 +969,18 @@ class Diagram(object):
         objective: float = 1,
     ) -> DVar:
         return DVar(self, name, lbound, ubound, objective)
+
+    def def_var(self, term):
+        term = as_term(term)
+        v = self.get_var("dummy",None,None,0)
+        self.add_constraint("dummy", v, Relation.EQ, term)
+        return v
+
+    def add_weight(self,term,w):
+        term = as_term(term)
+        v = self.get_var("dummy",None,None,w)
+        self.add_constraint("dummy", v, Relation.EQ, term)
+
 
     def point(
         self,

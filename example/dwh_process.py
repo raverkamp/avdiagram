@@ -21,6 +21,47 @@ from avdiagram import (
     mul,
 )
 
+class RectWithText(Rectangle):
+
+    def __init__(self, d: "Diagram", text, name:str="", line_width=mm(1), color="#eee",sz=mm(20)):
+        super().__init__(d, line_width,color,name)
+        te = DText(d,text,sz)
+        d.add_constraint("c",te.p1().y(), Relation.EQ,add(self.p1().y(),sz/2))
+        d.add_constraint("c0", te.p1().x(), Relation.GE, add(self.p1().x(), sz/2))
+        d.calign([te,self])
+        d.add_constraint("c0",self.p1().x(), Relation.LE, te.p1().x())
+        self._text = te
+        self._ysplit = d.get_var("ysplit", None, None)
+        d.add_constraint("c2", add(te.p2().y(), sz/2), Relation.EQ, self._ysplit)
+        d.add_constraint("c3", self._ysplit, Relation.LE, self.p2().y())
+        
+        self._p1_inner = d.point()
+        d.samev(self._p1_inner.x(), self.p1().x())
+        d.samev(self._p1_inner.y(), self._ysplit)
+        
+        
+    def text(self):
+        return self.text
+
+    def p1_inner(self):
+        return self._p1_inner
+
+class EllipseWithText(Ellipse):
+    
+    def __init__(self, d: "Diagram", text, line_width=mm(1), color="#eee",sz=mm(20)):
+        super().__init__(d, line_width, color)
+        te = DText(d,text,sz)
+        self._p1_inner = self.port(315)
+        self._p2_inner = self.port(135)
+        d.around(self._p1_inner, self._p2_inner, te, sz/2)
+
+    def p1_inner(self):
+        return self._p1_inner
+
+    def p2_inner(self):
+        return self._p2_inner
+
+
 
 def rtext(d, text, color, border=mm(1), size=8):
     assert isinstance(text, str), "text parameter must be a string"
@@ -37,67 +78,62 @@ def rtext(d, text, color, border=mm(1), size=8):
 def cmd_process1(args) -> None:
     d = Diagram(cm(100), cm(100), True)
 
-    #    sta = Rectangle(d,mm(1),"#0f0")
-    #   sta_h = d.text("Staging",mm(20))
+    staging = RectWithText(d,"STAGING", color = "#afa")
 
-    staging = Rectangle(d, mm(1), color="#afa")
-
-    t = DText(d, "Staging", mm(20))
     t1 = rtext(d, "Table 1", "#0f0", size=mm(10))
     t2 = rtext(d, "Table 2", "#0f0", size=mm(10))
     t3 = rtext(d, "Table 3", "#0f0", size=mm(10))
 
-    d.over([t], mm(10), [t1])
     d.over([t1], mm(10), [t2])
     d.over([t2], mm(10), [t3])
-    d.calign([t1, t2, t3])
+    d.calign([t1, t2, t3, staging])
 
-    d.around(staging.p1(), staging.p2(), [t, t1, t2, t3], mm(2))
+    d.around(staging.p1_inner(), staging.p2(), [t1, t2, t3], mm(2))
+    
 
-    psa = Rectangle(d, mm(1), color="#faa")
-    psat = DText(d, "PSA", mm(20))
-
+    psa = RectWithText(d,"PSA", color = "#faa")
+    
     pt1 = rtext(d, "PSA Table 1", "#f00", size=mm(10))
     pt2 = rtext(d, "PSA Table 2", "#f00", size=mm(10))
 
-    d.over([psat], mm(10), [pt1])
     d.over([pt1], mm(10), [pt2])
 
-    d.calign([psat, pt1, pt2])
+    d.calign([psa, pt1, pt2])
 
-    d.around(psa.p1(), psa.p2(), [psat, pt2, pt2], mm(2))
+    d.around(psa.p1_inner(), psa.p2(), [pt1, pt2], mm(2))
     d.over([staging], mm(20), [psa])
 
-    cleansing = Rectangle(d, mm(1), color="#aaf")
-
-    ct = DText(d, "CLEANSING", mm(20))
+    cleansing = RectWithText(d, "CLEANSING", color="#aaf")
 
     ct1 = rtext(d, "Table 1", "#00f", size=mm(10))
     ct2 = rtext(d, "Table 2", "#00f", size=mm(10))
     ct3 = rtext(d, "Table 3", "#00f", size=mm(10))
 
+    d.add_weight(ct1.height(),100)
+    
     cls_tables = [ct1, ct2, ct3]
-
-    d.over([ct], mm(10), [ct1])
 
     d.column(mm(10), cls_tables, 0.5)
 
-    ma = rtext(d, "VIEW_KUCHEN", "#00f", size=mm(10))
-    md = rtext(d, "VIEW_STEAK_MIT_POMMES", "#00f", size=mm(10))
-    me = rtext(d, "VIEW_SALAT", "#00f", size=mm(10))
-    co = rtext(d, "VIEW_SUPPE_MIT_MAGGI", "#00f", size=mm(10))
-    sg = rtext(d, "VIEW_KAFFE", "#00f", size=mm(10))
-    ps = rtext(d, "VIEW_MAGENPUTZER", "#00f", size=mm(10))
+    core_names = ["KUCHEN", "STEAK_MIT_POMMES", "SALAT", "SUPPE_MIT_MAGGI", "KAFFEE", "MAGENPUTZER"]
 
-    cls_views = [ma, md, me, co, sg, ps]
+    cls_views = [ rtext(d, "VIEW_" +x, "#00f", size=mm(10)) for x in core_names]
 
     d.column(mm(10), cls_views, 0.5)
 
-    d.left([ct1, ct2, ct3], mm(30), cls_views)
+    d.left(cls_tables , mm(30), cls_views)
 
-    d.around(cleansing.p1(), cleansing.p2(), cls_tables + cls_views, mm(2))
-    d.over([ct], mm(10), [ma])
-    d.some_align([cleansing, ct], 0.5)
+    e2= EllipseWithText(d, "More Processing",sz=mm(10))
+
+    d.samev(add(e2.p1().y(),e2.p2().y()), add(cleansing.p1_inner().y(),cleansing.p2().y()))
+
+    d.samev(add(e2.p1().y(),e2.p2().y()), add(ct2.p1().y(),ct2.p2().y()))
+
+    d.left(cls_tables, mm(20), [e2])
+    d.left([e2], mm(20), cls_views)
+
+    d.around(cleansing.p1_inner(), cleansing.p2(), cls_tables + cls_views+ [e2], mm(2))
+
 
     d.left([staging, psa], mm(30), [cleansing])
 
@@ -112,13 +148,7 @@ def cmd_process1(args) -> None:
     pro = DText(d, "Processing", mm(10))
     d.around(e.port(315), e.port(135), [pro], mm(10))
 
-    e2 = Ellipse(d, mm(1), "#dad")
-    d.around(e2.port(315), e2.port(135), [DText(d, "More Processing", mm(5))], mm(10))
-
-    d.left(cls_tables, mm(20), [e2])
-    d.left([e2], mm(20), cls_views)
-    d.over([ct], mm(1), [e2])
-
+   
     d.left([staging, psa], mm(40), [e])
 
     d.left([e], mm(40), [cleansing])
@@ -152,6 +182,44 @@ def cmd_process1(args) -> None:
 
     connect(e, 90, ct2, 35)
     connect(e, 135, ct3, 35)
+
+
+
+    main = RectWithText(d,"MAIN", color = "#aaf")
+
+    main_tables = [ rtext(d, "TABLE_" +x, "#00f", size=mm(10)) for x in core_names]
+
+    d.column(mm(10), main_tables, 0.5)
+
+
+    d.around(main.p1_inner(), main.p2(),main_tables, mm(10))
+
+    d.left([cleansing],mm(20),[main])
+
+    for (v,t) in zip(cls_views, main_tables):
+        connect(v, 15, t, 35)
+
+
+    dm = RectWithText(d,"DATAMART", color = "#fdd")
+    dm_tables = [ rtext(d, "TEMP_" +x, "#f00", size=mm(10)) for x in core_names]
+
+    d.column(mm(10), dm_tables, 0.5)
+
+    
+    d.left([main],mm(20),[dm])
+
+    dmt = rtext(d, "DATA_TABLE", "#00f", size=mm(10))
+
+    d.left(dm_tables, mm(20), [dmt])
+
+    for (v,t) in zip(main_tables, dm_tables):
+        connect(v, 15, t, 35)
+        connect(t,15,dmt,35)
+
+    
+    
+    d.around(dm.p1_inner(), dm.p2(),dm_tables + [dmt], mm(10))
+
 
     d.show(True)
 
