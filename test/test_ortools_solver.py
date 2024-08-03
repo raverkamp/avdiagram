@@ -1,4 +1,5 @@
 """simple ortools wrapper tests"""
+
 import unittest
 from avdiagram import ortools_solver
 

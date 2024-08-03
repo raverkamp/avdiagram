@@ -38,8 +38,8 @@ def cmd_example1(args) -> None:
 
     d.left(t1, mm(100), t4)
 
-    p1 = d.point(mm(40), mm(30), True, name="p1_40_30")
-    p2 = d.point(None, None, True, name="p1_50_20_off")
+    p1 = d.marker(mm(40), mm(30), True, name="p1_40_30")
+    p2 = d.marker(None, None, True, name="p1_50_20_off")
     d.over(p1, mm(50), p2)
     d.left(p1, mm(20), p2)
 
@@ -87,8 +87,8 @@ def mk_box(
     else:
         (leftb, rightb, upb, lowb) = borders
 
-    d.diffv(tl.point().x(), r.point().x(), leftb)
-    d.diffv(tl.point().y(), r.point().y(), upb)
+    d.diffv(tl.point().x, r.point().x, leftb)
+    d.diffv(tl.point().y, r.point().y, upb)
 
     d.diffv(r.width(), tl.width(), leftb + rightb)
     d.diffv(r.height(), tl.height(), upb + lowb)
@@ -134,7 +134,7 @@ def cmd_example4(args):
 
     d.lalign([r1, r2])
 
-    d.samev(r1.point().y(), r3.point().y())
+    d.samev(r1.point().y, r3.point().y)
 
     l = Line(d, 1)
     d.same(r1.port(12), l.p1())
@@ -227,22 +227,22 @@ def cmd_example7(args):
 def cmd_example8(args):
     d = Diagram(cm(50), cm(50), True)
 
-    p1 = d.point(mm(20), mm(30), True)
-    p2 = d.point(mm(200), mm(30), True)
-    p3 = d.point(mm(20), mm(200), True)
+    p1 = d.point(mm(20), mm(30))
+    p2 = d.point(mm(200), mm(30))
+    p3 = d.point(mm(20), mm(200))
 
-    p4 = d.point(mm(100), mm(100), True)
+    p4 = d.point(mm(100), mm(100))
 
-    p5 = d.point(mm(150), mm(110), True)
-    p6 = d.point(mm(150), mm(60), True)
+    p5 = d.point(mm(150), mm(110))
+    p6 = d.point(mm(150), mm(60))
 
-    CLine(d, [p1, p2], (1, 0), (-1, 0))
-    CLine(d, [p1, p3], (0, 1), (0, -1))
+    CLine(d, [p1, p2], (1, 0), (-1, 0), ">")
+    CLine(d, [p1, p3], (0, 1), (0, -1), ">")
 
-    CLine(d, [p1, p4, p6, p5, p3], (1, 1), (1, -1))
-    CLine(d, [p1, p4, p3], (1, 1), (1, -1))
+    CLine(d, [p1, p4, p6, p5, p3], (1, 1), (1, -1), ">")
+    CLine(d, [p1, p4, p3], (1, 1), (1, -1), ">")
 
-    CLine(d, [p4, p4], (1, -1), (1, 1))
+    CLine(d, [p4, p4], (1, -1), (1, 1), ">")
 
     d.show(True)
 

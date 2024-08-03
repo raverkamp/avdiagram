@@ -18,6 +18,8 @@ from avdiagram import (
     mul,
 )
 
+import pprint as pp
+
 
 def cmd_example1(args) -> None:
     d = Diagram(cm(50), cm(50), True)
@@ -44,9 +46,9 @@ def cmd_example1(args) -> None:
         if not first_head is None:
             d.add_constraint(
                 "mittig",
-                add(first_head.p1().x(), last_head.p2().x()),
+                add(first_head.p1().x, last_head.p2().x),
                 Relation.EQ,
-                add(label.p1().x(), label.p2().x()),
+                add(label.p1().x, label.p2().x),
             )
         return (label, all)
 
@@ -86,21 +88,22 @@ def cmd_dir_tree(args) -> None:
         p1 = d.point()
         p2 = d.point()
         a = list([label] + [px for (_, px, _) in l] + [py for (_, _, py) in l])
+        #        pp.pprint(a)
 
         d.around(p1, p2, a, 0)
 
         d.add_constraint(
             "mittig",
-            add(label.p1().x(), label.p2().x()),
+            add(label.p1().x, label.p2().x),
             Relation.EQ,
-            add(p1.x(), p2.x()),
+            add(p1.x, p2.x),
         )
 
         for lab, _, _ in l:
             connect(label, 25, lab, 5, connector2="")
         for (alab, ap1, ap2), (blab, bp1, bp2) in zip(l, l[1:]):
             d.left(ap2, mm(3), bp1)
-            d.add_constraint("eq", ap1.y(), Relation.EQ, bp1.y())
+            d.add_constraint("eq", ap1.y, Relation.EQ, bp1.y)
         d.over(label, mm(20), l[0][1])
         return (label, p1, p2)
 

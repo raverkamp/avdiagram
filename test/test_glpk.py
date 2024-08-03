@@ -1,4 +1,5 @@
 """simple glpk wrapper tests"""
+
 import unittest
 from avdiagram import glpk
 
@@ -19,6 +20,5 @@ class Test_simple(unittest.TestCase):
         self.assertAlmostEqual(4, res["y"])
 
 
-        
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,5 @@
 """simple diagram tests"""
+
 import os
 import tempfile
 import unittest
@@ -23,7 +24,6 @@ class Test_simple(unittest.TestCase):
         d.over(t2, mm(2), t1)
         with self.assertRaises(Exception):
             res = d.solve_problem(False)
-
 
 
 if __name__ == "__main__":

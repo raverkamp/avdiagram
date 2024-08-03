@@ -35,18 +35,18 @@ class RectWithText(Rectangle):
     ):
         super().__init__(d, line_width, color, name)
         te = DText(d, text, sz)
-        d.add_constraint("c", te.p1().y(), Relation.EQ, add(self.p1().y(), sz / 2))
-        d.add_constraint("c0", te.p1().x(), Relation.GE, add(self.p1().x(), sz / 2))
+        d.add_constraint("c", te.p1().y, Relation.EQ, add(self.p1().y, sz / 2))
+        d.add_constraint("c0", te.p1().x, Relation.GE, add(self.p1().x, sz / 2))
         d.calign([te, self])
-        d.add_constraint("c0", self.p1().x(), Relation.LE, te.p1().x())
+        d.add_constraint("c0", self.p1().x, Relation.LE, te.p1().x)
         self._text = te
         self._ysplit = d.get_var("ysplit", None, None)
-        d.add_constraint("c2", add(te.p2().y(), sz / 2), Relation.EQ, self._ysplit)
-        d.add_constraint("c3", self._ysplit, Relation.LE, self.p2().y())
+        d.add_constraint("c2", add(te.p2().y, sz / 2), Relation.EQ, self._ysplit)
+        d.add_constraint("c3", self._ysplit, Relation.LE, self.p2().y)
 
         self._p1_inner = d.point()
-        d.samev(self._p1_inner.x(), self.p1().x())
-        d.samev(self._p1_inner.y(), self._ysplit)
+        d.samev(self._p1_inner.x, self.p1().x)
+        d.samev(self._p1_inner.y, self._ysplit)
 
     def text(self):
         return self.text
@@ -140,11 +140,9 @@ def cmd_process1(args) -> None:
 
     e2 = EllipseWithText(d, "More Processing", sz=mm(10))
 
-    d.samev(
-        add(e2.p1().y(), e2.p2().y()), add(cleansing.p1_inner().y(), cleansing.p2().y())
-    )
+    d.samev(add(e2.p1().y, e2.p2().y), add(cleansing.p1_inner().y, cleansing.p2().y))
 
-    d.samev(add(e2.p1().y(), e2.p2().y()), add(ct2.p1().y(), ct2.p2().y()))
+    d.samev(add(e2.p1().y, e2.p2().y), add(ct2.p1().y, ct2.p2().y))
 
     d.left(cls_tables, mm(20), [e2])
     d.left([e2], mm(60), cls_views)
@@ -155,9 +153,9 @@ def cmd_process1(args) -> None:
 
     d.add_constraint(
         "mittig",
-        add(staging.p1().y(), psa.p2().y()),
+        add(staging.p1().y, psa.p2().y),
         Relation.EQ,
-        add(cleansing.p1().y(), cleansing.p2().y()),
+        add(cleansing.p1().y, cleansing.p2().y),
     )
 
     e = Ellipse(d, mm(1), "#dda")
@@ -170,9 +168,9 @@ def cmd_process1(args) -> None:
 
     d.add_constraint(
         "a",
-        add(e.p1().y(), e.p2().y()),
+        add(e.p1().y, e.p2().y),
         Relation.EQ,
-        add(staging.p1().y(), psa.p2().y()),
+        add(staging.p1().y, psa.p2().y),
     )
 
     a = Arrow(d, mm(10))
@@ -228,7 +226,7 @@ def cmd_process1(args) -> None:
 
     d.around(dm.p1_inner(), dm.p2(), dm_tables + [dmt], mm(10))
 
-    d.samev(add(dmt.p1().y(), dmt.p2().y()), add(dm.p1_inner().y(), dm.p2().y()))
+    d.samev(add(dmt.p1().y, dmt.p2().y), add(dm.p1_inner().y, dm.p2().y))
 
     d.add_weight(dmt.height(), 1)
 
