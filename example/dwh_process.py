@@ -57,7 +57,7 @@ class RectWithText(Rectangle):
 
 class EllipseWithText(Ellipse):
 
-    def __init__(self, d: "Diagram", text, line_width=mm(1), color="#eee", sz=mm(20)):
+    def __init__(self, d: "Diagram", text, line_width=mm(1), color="#eee", sz=mm(10)):
         super().__init__(d, line_width, color)
         te = DText(d, text, sz)
         self._p1_inner = self.port(315)
@@ -79,7 +79,7 @@ def rtext(d, text, color, border=mm(1), size=8):
 
     re = Rectangle(d, border, color)
     te = d.text(text, size)
-    d.around(re.p1(), re.p2(), te, mm(10))
+    d.around(re.p1(), re.p2(), te, border)
     d.add_weight(re.width(), 2)
     return re
 
@@ -91,7 +91,7 @@ def cmd_process1(args) -> None:
 
     t1 = rtext(d, "Table 1", "#0f0", size=mm(10))
     t2 = rtext(d, "Table 2", "#0f0", size=mm(10))
-    t3 = rtext(d, "Table 3 xxxxxxxxxxxxx", "#0f0", size=mm(10))
+    t3 = rtext(d, "Table 3", "#0f0", size=mm(10))
 
     d.over([t1], mm(10), [t2])
     d.over([t2], mm(10), [t3])
@@ -158,9 +158,7 @@ def cmd_process1(args) -> None:
         add(cleansing.p1().y, cleansing.p2().y),
     )
 
-    e = Ellipse(d, mm(1), "#dda")
-    pro = DText(d, "Processing", mm(10))
-    d.around(e.port(315), e.port(135), [pro], mm(10))
+    e = EllipseWithText(d, "Processing", sz=mm(10), color="pink")
 
     d.left([staging, psa], mm(40), [e])
 
