@@ -79,7 +79,7 @@ def rtext(d, text, color, border=mm(1), size=8):
 
     re = Rectangle(d, border, color)
     te = d.text(text, size)
-    d.around(re.p1(), re.p2(), te, border)
+    d.around(re.p1(), re.p2(), te, [border, border, border, border+size/2])
     d.add_weight(re.width(), 2)
     return re
 
@@ -103,6 +103,8 @@ def cmd_process1(args) -> None:
 
     pt1 = rtext(d, "PSA Table 1", "#f00", size=mm(10))
     pt2 = rtext(d, "PSA Table 2", "#f00", size=mm(10))
+
+    d.samev(staging.width(), psa.width())
 
     d.over([pt1], mm(10), [pt2])
 

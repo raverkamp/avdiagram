@@ -27,18 +27,22 @@ def cmd_example1(args) -> None:
     def create_tree(t):
         (lab, children) = t
         # returns a tree of all componenets
+        node = Rectangle(d, 1, "#f00")
         label = d.text(lab, 12)
+        d.around(node.p1(), node.p2(),label,(3,3,3,3))
+        d.add_weight(node.width(), 2)
+        d.add_weight(node.height(), 2)
         last_t = None
         first_head = None
         last_head = None
-        all = [label]
+        all = [node]
         for child in children:
             (head, compos) = create_tree(child)
-            connect(label, 25, head, 5)
+            connect(node, 25, head, 5)
             if not first_head:
                 first_head = head
             last_head = head
-            d.over(label, mm(20), compos)
+            d.over(node, mm(20), compos)
             if last_t:
                 d.left(last_t, mm(10), compos)
             last_t = compos
@@ -48,9 +52,9 @@ def cmd_example1(args) -> None:
                 "mittig",
                 add(first_head.p1().x, last_head.p2().x),
                 Relation.EQ,
-                add(label.p1().x, label.p2().x),
+                add(node.p1().x, node.p2().x),
             )
-        return (label, all)
+        return (node, all)
 
     # a tree is a 2-tuple with a label and list of children which are also trees.
     create_tree(
