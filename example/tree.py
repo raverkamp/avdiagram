@@ -28,7 +28,7 @@ def cmd_example1(args) -> None:
         (lab, children) = t
         # returns a tree of all componenets
         node = Rectangle(d, 1, "#f00")
-        label = d.text(lab, 12)
+        label = d.text(lab, 24)
         d.around(node.p1(), node.p2(),label,(3,3,3,3))
         d.add_weight(node.width(), 2)
         d.add_weight(node.height(), 2)
